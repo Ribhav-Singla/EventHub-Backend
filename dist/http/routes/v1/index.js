@@ -19,6 +19,7 @@ const index_1 = __importDefault(require("../../../db/index"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const config_1 = require("../../config");
 const user_1 = require("../../middleware/user");
+const upload_1 = require("../../upload");
 exports.router = express_1.default.Router();
 exports.router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     res.send('Healthy Server');
@@ -112,3 +113,4 @@ exports.router.post('/me', user_1.userMiddleware, (req, res) => __awaiter(void 0
         res.status(500).json({ message: "Internal server error" });
     }
 }));
+exports.router.use('/upload_images', upload_1.imageRouter);

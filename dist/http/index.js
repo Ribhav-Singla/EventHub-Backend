@@ -15,6 +15,7 @@ const corsOptions = {
 };
 app.use((0, cors_1.default)(corsOptions));
 app.use(express_1.default.json());
+app.use(express_1.default.static('uploads/'));
 app.use('/api/v1', v1_1.router);
 app.listen(process.env.PORT || 3000, () => {
     console.log('Server is running on port 3000');

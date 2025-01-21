@@ -12,6 +12,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions))
 app.use(express.json())
+app.use(express.static('uploads/'))
 
 app.use('/api/v1', router)
 
