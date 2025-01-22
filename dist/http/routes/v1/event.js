@@ -1,0 +1,62 @@
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.eventRouter = void 0;
+const express_1 = __importDefault(require("express"));
+const user_1 = require("../../middleware/user");
+const index_1 = __importDefault(require("../../../db/index"));
+exports.eventRouter = express_1.default.Router();
+exports.eventRouter.post('/', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('inside event');
+    try {
+        if (!req.userId) {
+            res.status(401).json({ message: 'Unauthorized' });
+            return;
+        }
+        const isoDate = new Date(`${req.body.date}T${req.body.time_frame[0].time}Z`);
+        const event = yield index_1.default.event.create({
+            data: {
+                title: req.body.title,
+                type: req.body.type,
+                category: req.body.category,
+                description: req.body.description,
+                price: req.body.price,
+                total_tickets: req.body.total_tickets,
+                tickets_sold: '0',
+                date: isoDate,
+                time_frame: req.body.time_frame,
+                images: req.body.images,
+                creatorId: req.userId,
+                location: {
+                    create: [{
+                            venue: req.body.location.venu,
+                            city: req.body.location.city,
+                            country: req.body.location.country
+                        }]
+                },
+                organizer_details: {
+                    create: [{
+                            phone: req.body.organizer_details.phone,
+                            email: req.body.organizer_details.email
+                        }]
+                }
+            }
+        });
+        res.status(201).json({ eventId: event.id });
+    }
+    catch (error) {
+        console.log('error in event', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}));

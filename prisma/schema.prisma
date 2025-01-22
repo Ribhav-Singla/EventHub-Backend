@@ -14,8 +14,44 @@ datasource db {
 }
 
 model User {
-  id       String @id @unique @default(cuid())
-  username String 
-  email    String @unique
+  id       String  @id @unique @default(cuid())
+  username String
+  email    String  @unique
   password String
+  events   Event[]
+}
+
+model Event {
+  id               String      @id @default(cuid())
+  title            String
+  type             String
+  category         String
+  description      String
+  price            String
+  total_tickets    String
+  tickets_sold     String
+  date             DateTime
+  time_frame       Json
+  images           String[]
+  location         Location[]
+  organizer_details Organizer[]
+  creatorId        String      
+  user             User        @relation(fields: [creatorId], references: [id])
+}
+
+model Location {
+  id      String @id @default(cuid())
+  venue   String
+  city    String
+  country String
+  eventId String 
+  event   Event  @relation(fields: [eventId], references: [id])
+}
+
+model Organizer {
+  id      String @id @default(cuid())
+  phone   String
+  email   String
+  eventId String 
+  event   Event  @relation(fields: [eventId], references: [id])
 }
