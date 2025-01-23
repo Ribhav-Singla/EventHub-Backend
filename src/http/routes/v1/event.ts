@@ -1,6 +1,7 @@
 import express from 'express'
 import { userMiddleware } from '../../middleware/user'
 import client from '../../../db/index'
+import moment from 'moment-timezone'
 
 export const eventRouter = express.Router()
 
@@ -57,12 +58,12 @@ eventRouter.get('/', async (req, res) => {
                 images: true,
                 date: true,
                 location: {
-                    select:{
+                    select: {
                         venue: true,
                         city: true,
                     }
                 },
-                price:true
+                price: true
             }
         })
 
@@ -78,36 +79,79 @@ eventRouter.get('/', async (req, res) => {
     }
 })
 
+eventRouter.get('/upcoming', async (req, res) => {
+    const limit = Number(req.query.limit) | 1
+    try {
+
+        const currentDateTimeIST = moment.utc().add(5, 'hours').add(30, 'minutes').format('YYYY-MM-DDTHH:mm:ss[Z]');
+        const fetched_events = await client.event.findMany({
+            select: {
+                id: true,
+                title: true,
+                description: true,
+                images: true,
+                date: true,
+                location: {
+                    select: {
+                        venue: true,
+                        city: true,
+                    }
+                },
+                price: true,
+                time_frame:true
+            },
+            where: {
+                date: {
+                    gte: currentDateTimeIST,
+                },
+            },
+            orderBy: [
+                { date: 'asc' },
+            ],
+            take: limit,
+        })
+
+        const events = fetched_events.map(event => ({
+            ...event,
+            images: event.images.slice(0, 1) || []
+        }));
+        res.status(200).json(events)
+    } catch (error) {
+        console.log('error in get event', error);
+        res.status(500).json({ message: 'Internal Server Error' })
+    }
+})
+
 eventRouter.get('/:eventId', async (req, res) => {
     const eventId = req.params.eventId
     try {
         const events = await client.event.findUnique({
-            where:{
+            where: {
                 id: eventId
             },
             select: {
                 id: true,
                 title: true,
-                type:true,
-                category:true,
+                type: true,
+                category: true,
                 description: true,
-                price:true,
-                total_tickets:true,
-                tickets_sold:true,
+                price: true,
+                total_tickets: true,
+                tickets_sold: true,
                 date: true,
                 time_frame: true,
                 images: true,
                 location: {
-                    select:{
+                    select: {
                         venue: true,
                         city: true,
-                        country:true,
+                        country: true,
                     }
                 },
-                organizer_details:{
-                    select:{
-                        phone:true,
-                        email:true,
+                organizer_details: {
+                    select: {
+                        phone: true,
+                        email: true,
                     }
                 }
             }

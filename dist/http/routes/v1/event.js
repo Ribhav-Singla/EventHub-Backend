@@ -16,6 +16,7 @@ exports.eventRouter = void 0;
 const express_1 = __importDefault(require("express"));
 const user_1 = require("../../middleware/user");
 const index_1 = __importDefault(require("../../../db/index"));
+const moment_timezone_1 = __importDefault(require("moment-timezone"));
 exports.eventRouter = express_1.default.Router();
 exports.eventRouter.post('/', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('inside event');
@@ -77,6 +78,44 @@ exports.eventRouter.get('/', (req, res) => __awaiter(void 0, void 0, void 0, fun
                 },
                 price: true
             }
+        });
+        const events = fetched_events.map(event => (Object.assign(Object.assign({}, event), { images: event.images.slice(0, 1) || [] })));
+        res.status(200).json(events);
+    }
+    catch (error) {
+        console.log('error in get event', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}));
+exports.eventRouter.get('/upcoming', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const limit = Number(req.query.limit) | 1;
+    try {
+        const currentDateTimeIST = moment_timezone_1.default.utc().add(5, 'hours').add(30, 'minutes').format('YYYY-MM-DDTHH:mm:ss[Z]');
+        const fetched_events = yield index_1.default.event.findMany({
+            select: {
+                id: true,
+                title: true,
+                description: true,
+                images: true,
+                date: true,
+                location: {
+                    select: {
+                        venue: true,
+                        city: true,
+                    }
+                },
+                price: true,
+                time_frame: true
+            },
+            where: {
+                date: {
+                    gte: currentDateTimeIST,
+                },
+            },
+            orderBy: [
+                { date: 'asc' },
+            ],
+            take: limit,
         });
         const events = fetched_events.map(event => (Object.assign(Object.assign({}, event), { images: event.images.slice(0, 1) || [] })));
         res.status(200).json(events);
