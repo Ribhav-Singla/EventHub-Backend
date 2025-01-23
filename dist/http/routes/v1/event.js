@@ -60,3 +60,70 @@ exports.eventRouter.post('/', user_1.userMiddleware, (req, res) => __awaiter(voi
         res.status(500).json({ message: 'Internal Server Error' });
     }
 }));
+exports.eventRouter.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const fetched_events = yield index_1.default.event.findMany({
+            select: {
+                id: true,
+                title: true,
+                description: true,
+                images: true,
+                date: true,
+                location: {
+                    select: {
+                        venue: true,
+                        city: true,
+                    }
+                },
+                price: true
+            }
+        });
+        const events = fetched_events.map(event => (Object.assign(Object.assign({}, event), { images: event.images.slice(0, 1) || [] })));
+        res.status(200).json(events);
+    }
+    catch (error) {
+        console.log('error in get event', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}));
+exports.eventRouter.get('/:eventId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const eventId = req.params.eventId;
+    try {
+        const events = yield index_1.default.event.findUnique({
+            where: {
+                id: eventId
+            },
+            select: {
+                id: true,
+                title: true,
+                type: true,
+                category: true,
+                description: true,
+                price: true,
+                total_tickets: true,
+                tickets_sold: true,
+                date: true,
+                time_frame: true,
+                images: true,
+                location: {
+                    select: {
+                        venue: true,
+                        city: true,
+                        country: true,
+                    }
+                },
+                organizer_details: {
+                    select: {
+                        phone: true,
+                        email: true,
+                    }
+                }
+            }
+        });
+        res.status(200).json(events);
+    }
+    catch (error) {
+        console.log('error in get event', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}));
