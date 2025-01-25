@@ -34,7 +34,7 @@ router.post('/signup', async (req, res) => {
         res.json({
             username: user.username,
             email: user.email,
-            avatar: 'https://masterpiecer-images.s3.yandex.net/aa6c93406ba911ee90bd7a2f0d1382ba:upscaled',
+            avatar: 'https://avatar.iran.liara.run/public',
             token: token
         })
     } catch (error) {
@@ -74,7 +74,7 @@ router.post('/login', async (req, res) => {
         res.json({
             username: user.username,
             email: user.email,
-            avatar: 'https://masterpiecer-images.s3.yandex.net/aa6c93406ba911ee90bd7a2f0d1382ba:upscaled',
+            avatar: 'https://avatar.iran.liara.run/public',
             token: token
         })
 
@@ -99,7 +99,7 @@ router.post('/me', userMiddleware, async (req, res) => {
         res.json({
             username: user.username,
             email: user.email,
-            avatar: 'https://masterpiecer-images.s3.yandex.net/aa6c93406ba911ee90bd7a2f0d1382ba:upscaled'
+            avatar: 'https://avatar.iran.liara.run/public'
         })
     } catch (error) {
         res.status(500).json({ message: "Internal server error" })

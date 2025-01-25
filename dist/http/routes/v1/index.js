@@ -44,7 +44,7 @@ exports.router.post('/signup', (req, res) => __awaiter(void 0, void 0, void 0, f
         res.json({
             username: user.username,
             email: user.email,
-            avatar: 'https://masterpiecer-images.s3.yandex.net/aa6c93406ba911ee90bd7a2f0d1382ba:upscaled',
+            avatar: 'https://avatar.iran.liara.run/public',
             token: token
         });
     }
@@ -83,7 +83,7 @@ exports.router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, fu
         res.json({
             username: user.username,
             email: user.email,
-            avatar: 'https://masterpiecer-images.s3.yandex.net/aa6c93406ba911ee90bd7a2f0d1382ba:upscaled',
+            avatar: 'https://avatar.iran.liara.run/public',
             token: token
         });
     }
@@ -107,7 +107,7 @@ exports.router.post('/me', user_1.userMiddleware, (req, res) => __awaiter(void 0
         res.json({
             username: user.username,
             email: user.email,
-            avatar: 'https://masterpiecer-images.s3.yandex.net/aa6c93406ba911ee90bd7a2f0d1382ba:upscaled'
+            avatar: 'https://avatar.iran.liara.run/public'
         });
     }
     catch (error) {

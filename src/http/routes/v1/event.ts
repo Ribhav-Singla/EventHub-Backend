@@ -49,6 +49,9 @@ eventRouter.post('/', userMiddleware, async (req, res) => {
 })
 
 eventRouter.get('/', async (req, res) => {
+    const limit = 9;
+    const page = Number(req.query.page) || 1;
+    const skip = (page - 1) * limit;
     try {
         const fetched_events = await client.event.findMany({
             select: {
@@ -64,15 +67,22 @@ eventRouter.get('/', async (req, res) => {
                     }
                 },
                 price: true
-            }
+            },
+            take: limit,
+            skip: skip
         })
+
+        const total_events = await client.event.count()
 
         const events = fetched_events.map(event => ({
             ...event,
             images: event.images.slice(0, 1) || []
         }));
 
-        res.status(200).json(events)
+        res.status(200).json({
+            events,
+            total_events
+        })
     } catch (error) {
         console.log('error in get event', error);
         res.status(500).json({ message: 'Internal Server Error' })
@@ -98,7 +108,7 @@ eventRouter.get('/upcoming', async (req, res) => {
                     }
                 },
                 price: true,
-                time_frame:true
+                time_frame: true
             },
             where: {
                 date: {

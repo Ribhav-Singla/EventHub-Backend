@@ -14,29 +14,31 @@ datasource db {
 }
 
 model User {
-  id       String  @id @unique @default(cuid())
-  username String
-  email    String  @unique
-  password String
-  events   Event[]
+  id          String        @id @unique @default(cuid())
+  username    String?
+  email       String        @unique
+  password    String
+  events      Event[]
+  Transaction Transaction[]
 }
 
 model Event {
-  id               String      @id @default(cuid())
-  title            String
-  type             String
-  category         String
-  description      String
-  price            String
-  total_tickets    String
-  tickets_sold     String
-  date             DateTime
-  time_frame       Json
-  images           String[]
-  location         Location[]
+  id                String        @id @default(cuid())
+  title             String
+  type              String
+  category          String
+  description       String
+  price             String
+  total_tickets     String
+  tickets_sold      String
+  date              DateTime
+  time_frame        Json
+  images            String[]
+  location          Location[]
   organizer_details Organizer[]
-  creatorId        String      
-  user             User        @relation(fields: [creatorId], references: [id])
+  creatorId         String
+  user              User          @relation(fields: [creatorId], references: [id])
+  Transaction       Transaction[]
 }
 
 model Location {
@@ -44,7 +46,7 @@ model Location {
   venue   String
   city    String
   country String
-  eventId String 
+  eventId String
   event   Event  @relation(fields: [eventId], references: [id])
 }
 
@@ -52,6 +54,33 @@ model Organizer {
   id      String @id @default(cuid())
   phone   String
   email   String
-  eventId String 
+  eventId String
   event   Event  @relation(fields: [eventId], references: [id])
+}
+
+model Transaction {
+  id             String         @id @default(cuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id])
+  eventId        String
+  event          Event          @relation(fields: [eventId], references: [id])
+  ticket_count   Int
+  seat_category  String
+  attendee_type  ATTENDEE
+  ticket_details TicketDetail[]
+  created_at     DateTime       @default(now())
+}
+
+model TicketDetail {
+  id            String      @id @default(cuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  name          String
+  age           Int
+}
+
+enum ATTENDEE {
+  Attendee
+  Delegate
+  Visitor
 }

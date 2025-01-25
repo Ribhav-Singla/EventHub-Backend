@@ -62,6 +62,9 @@ exports.eventRouter.post('/', user_1.userMiddleware, (req, res) => __awaiter(voi
     }
 }));
 exports.eventRouter.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const limit = 9;
+    const page = Number(req.query.page) || 1;
+    const skip = (page - 1) * limit;
     try {
         const fetched_events = yield index_1.default.event.findMany({
             select: {
@@ -77,10 +80,16 @@ exports.eventRouter.get('/', (req, res) => __awaiter(void 0, void 0, void 0, fun
                     }
                 },
                 price: true
-            }
+            },
+            take: limit,
+            skip: skip
         });
+        const total_events = yield index_1.default.event.count();
         const events = fetched_events.map(event => (Object.assign(Object.assign({}, event), { images: event.images.slice(0, 1) || [] })));
-        res.status(200).json(events);
+        res.status(200).json({
+            events,
+            total_events
+        });
     }
     catch (error) {
         console.log('error in get event', error);
