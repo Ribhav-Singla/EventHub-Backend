@@ -21,6 +21,7 @@ const config_1 = require("../../config");
 const user_1 = require("../../middleware/user");
 const upload_1 = require("../../upload");
 const event_1 = require("./event");
+const user_2 = require("./user");
 exports.router = express_1.default.Router();
 exports.router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     res.send('Healthy Server');
@@ -116,3 +117,4 @@ exports.router.post('/me', user_1.userMiddleware, (req, res) => __awaiter(void 0
 }));
 exports.router.use('/upload_images', upload_1.imageRouter);
 exports.router.use('/event', event_1.eventRouter);
+exports.router.use('/user', user_2.userRouter);

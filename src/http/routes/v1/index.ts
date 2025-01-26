@@ -6,6 +6,7 @@ import { JWT_PASSWORD } from '../../config'
 import { userMiddleware } from '../../middleware/user'
 import { imageRouter } from '../../upload'
 import { eventRouter } from './event'
+import { userRouter } from './user'
 
 export const router = express.Router()
 
@@ -108,3 +109,4 @@ router.post('/me', userMiddleware, async (req, res) => {
 
 router.use('/upload_images', imageRouter)
 router.use('/event', eventRouter)
+router.use('/user',userRouter)

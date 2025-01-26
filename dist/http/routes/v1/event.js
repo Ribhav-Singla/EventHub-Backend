@@ -137,7 +137,7 @@ exports.eventRouter.get('/upcoming', (req, res) => __awaiter(void 0, void 0, voi
 exports.eventRouter.get('/:eventId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const eventId = req.params.eventId;
     try {
-        const events = yield index_1.default.event.findUnique({
+        const event = yield index_1.default.event.findUnique({
             where: {
                 id: eventId
             },
@@ -165,10 +165,25 @@ exports.eventRouter.get('/:eventId', (req, res) => __awaiter(void 0, void 0, voi
                         phone: true,
                         email: true,
                     }
+                },
+                wishlist: {
+                    where: {
+                        userId: req.userId,
+                    },
+                    select: {
+                        id: true
+                    }
                 }
             }
         });
-        res.status(200).json(events);
+        let heart = false;
+        if (event && event.wishlist && event.wishlist.length > 0) {
+            heart = true;
+        }
+        res.status(200).json({
+            event,
+            heart
+        });
     }
     catch (error) {
         console.log('error in get event', error);

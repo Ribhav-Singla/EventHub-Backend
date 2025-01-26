@@ -135,7 +135,7 @@ eventRouter.get('/upcoming', async (req, res) => {
 eventRouter.get('/:eventId', async (req, res) => {
     const eventId = req.params.eventId
     try {
-        const events = await client.event.findUnique({
+        const event = await client.event.findUnique({
             where: {
                 id: eventId
             },
@@ -163,11 +163,27 @@ eventRouter.get('/:eventId', async (req, res) => {
                         phone: true,
                         email: true,
                     }
+                },
+                wishlist: {
+                    where: {
+                        userId: req.userId,
+                    },
+                    select: {
+                        id: true
+                    }
                 }
             }
         })
 
-        res.status(200).json(events)
+        let heart = false;
+        if (event && event.wishlist && event.wishlist.length > 0) {
+            heart = true
+        }
+
+        res.status(200).json({
+            event,
+            heart
+        })
     } catch (error) {
         console.log('error in get event', error);
         res.status(500).json({ message: 'Internal Server Error' })

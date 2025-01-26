@@ -19,7 +19,8 @@ model User {
   email       String        @unique
   password    String
   events      Event[]
-  Transaction Transaction[]
+  transaction Transaction[]
+  wishlist    Wishlist[]
 }
 
 model Event {
@@ -38,7 +39,8 @@ model Event {
   organizer_details Organizer[]
   creatorId         String
   user              User          @relation(fields: [creatorId], references: [id])
-  Transaction       Transaction[]
+  transaction       Transaction[]
+  wishlist          Wishlist[]
 }
 
 model Location {
@@ -77,6 +79,15 @@ model TicketDetail {
   transaction   Transaction @relation(fields: [transactionId], references: [id])
   name          String
   age           Int
+}
+
+model Wishlist {
+  id      String   @id @default(cuid())
+  userId  String
+  user    User     @relation(fields: [userId], references: [id])
+  eventId String
+  event   Event    @relation(fields: [eventId], references: [id])
+  addedAt DateTime @default(now())
 }
 
 enum ATTENDEE {
