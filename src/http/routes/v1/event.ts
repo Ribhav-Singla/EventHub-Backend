@@ -28,15 +28,15 @@ eventRouter.post('/', userMiddleware, async (req, res) => {
                 creatorId: req.userId,
                 location: {
                     create: [{
-                        venue: req.body.location.venu,
-                        city: req.body.location.city,
-                        country: req.body.location.country
+                        venue: req.body.location[0].venu,
+                        city: req.body.location[0].city,
+                        country: req.body.location[0].country
                     }]
                 },
                 organizer_details: {
                     create: [{
-                        phone: req.body.organizer_details.phone,
-                        email: req.body.organizer_details.email
+                        phone: req.body.organizer_details[0].phone,
+                        email: req.body.organizer_details[0].email
                     }]
                 }
             }

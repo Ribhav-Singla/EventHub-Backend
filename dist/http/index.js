@@ -9,7 +9,7 @@ const cors_1 = __importDefault(require("cors"));
 const app = (0, express_1.default)();
 const corsOptions = {
     origin: '*',
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "DELETE", "PUT"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
 };

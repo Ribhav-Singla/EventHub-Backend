@@ -67,6 +67,7 @@ model Transaction {
   eventId        String
   event          Event          @relation(fields: [eventId], references: [id])
   ticket_count   Int
+  amount         String
   seat_category  String
   attendee_type  ATTENDEE
   ticket_details TicketDetail[]
@@ -78,7 +79,7 @@ model TicketDetail {
   transactionId String
   transaction   Transaction @relation(fields: [transactionId], references: [id])
   name          String
-  age           Int
+  age           String
 }
 
 model Wishlist {
