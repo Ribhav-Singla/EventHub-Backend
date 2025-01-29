@@ -16,6 +16,7 @@ exports.userRouter = void 0;
 const express_1 = __importDefault(require("express"));
 const user_1 = require("../../middleware/user");
 const index_1 = __importDefault(require("../../../db/index"));
+const bcrypt_1 = __importDefault(require("bcrypt"));
 exports.userRouter = express_1.default.Router();
 exports.userRouter.post("/wishlist/:eventId", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("inside wishlist");
@@ -178,11 +179,16 @@ exports.userRouter.get('/:eventId', (req, res) => __awaiter(void 0, void 0, void
     }
 }));
 exports.userRouter.put('/:eventId', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('ínside update');
-    console.log(req.body);
+    console.log('Inside update');
     const eventId = req.params.eventId;
     try {
-        const isoDate = new Date(`${req.body.date}T${req.body.time_frame[0].time}Z`);
+        let isoDate;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(req.body.date)) {
+            isoDate = new Date(`${req.body.date}T${req.body.time_frame[0].time}Z`);
+        }
+        else {
+            isoDate = req.body.date;
+        }
         const event = yield index_1.default.event.update({
             where: {
                 id: eventId,
@@ -201,24 +207,87 @@ exports.userRouter.put('/:eventId', user_1.userMiddleware, (req, res) => __await
                 images: req.body.images,
                 creatorId: req.userId,
                 location: {
-                    create: [{
+                    update: {
+                        where: {
+                            eventId: eventId,
+                        },
+                        data: {
                             venue: req.body.location[0].venue,
                             city: req.body.location[0].city,
                             country: req.body.location[0].country
-                        }]
+                        }
+                    }
                 },
                 organizer_details: {
-                    create: [{
+                    update: {
+                        where: {
+                            eventId: eventId,
+                        },
+                        data: {
                             phone: req.body.organizer_details[0].phone,
                             email: req.body.organizer_details[0].email
-                        }]
+                        }
+                    }
                 }
             }
         });
         res.status(200).json({ eventId: event.id });
     }
     catch (error) {
-        console.log('error in update event', error);
+        console.log('Error in update event:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}));
+exports.userRouter.delete('/:eventId', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const eventId = req.params.eventId;
+    try {
+        const event = yield index_1.default.event.delete({
+            where: {
+                id: eventId,
+                creatorId: req.userId
+            }
+        });
+        res.json({ eventId: event.id });
+    }
+    catch (error) {
+        console.log('error in delete event', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}));
+exports.userRouter.post('/update/password', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const user = yield index_1.default.user.findUnique({
+            where: {
+                id: req.userId
+            }
+        });
+        if (!user) {
+            res.status(404).json({ message: 'User not found' });
+            return;
+        }
+        if (req.body.current_password) {
+            const isValid = bcrypt_1.default.compareSync(req.body.current_password, user.password);
+            if (!isValid) {
+                res.status(401).json({ message: 'Invalid current password' });
+                return;
+            }
+        }
+        // update with req.body.new_password
+        const saltRounds = 10;
+        const salt = bcrypt_1.default.genSaltSync(saltRounds);
+        const hashedPassword = bcrypt_1.default.hashSync(req.body.new_password, salt);
+        const userUpdate = yield index_1.default.user.update({
+            where: {
+                id: req.userId
+            },
+            data: {
+                password: hashedPassword
+            }
+        });
+        res.json({ userId: userUpdate.id });
+    }
+    catch (error) {
+        console.log('error in update password', error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 }));

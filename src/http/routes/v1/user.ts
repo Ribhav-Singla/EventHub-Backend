@@ -1,6 +1,7 @@
 import express from "express";
 import { userMiddleware } from "../../middleware/user";
 import client from "../../../db/index";
+import bcrypt from 'bcrypt';
 
 export const userRouter = express.Router();
 
@@ -169,14 +170,17 @@ userRouter.get('/:eventId', async (req, res) => {
 })
 
 userRouter.put('/:eventId', userMiddleware, async (req, res) => {
-    console.log('ínside update');    
-    const eventId = req.params.eventId
+    console.log('Inside update');
+    const eventId = req.params.eventId;
+
     try {
-        const isoDate = new Date(`${req.body.date}T${req.body.time_frame[0].time}Z`);
-        
-        const location = await client.location.findFirst({ where : {eventId : eventId},select:{id:true}})
-        const organizer_details =  await client.organizer.findFirst({ where: {eventId:eventId},select:{id:true}})
-        
+        let isoDate;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(req.body.date)) {
+            isoDate = new Date(`${req.body.date}T${req.body.time_frame[0].time}Z`);
+        } else {
+            isoDate = req.body.date;
+        }
+
         const event = await client.event.update({
             where: {
                 id: eventId,
@@ -195,40 +199,91 @@ userRouter.put('/:eventId', userMiddleware, async (req, res) => {
                 images: req.body.images,
                 creatorId: req.userId,
                 location: {
-                    update: [{
-                        venue: req.body.location[0].venue,
-                        city: req.body.location[0].city,
-                        country: req.body.location[0].country
-                    }]
+                    update: {
+                        where: {
+                            eventId: eventId,
+                        },
+                        data: {
+                            venue: req.body.location[0].venue,
+                            city: req.body.location[0].city,
+                            country: req.body.location[0].country
+                        }
+                    }
                 },
                 organizer_details: {
-                    update: [{
-                        phone: req.body.organizer_details[0].phone,
-                        email: req.body.organizer_details[0].email
-                    }]
+                    update: {
+                        where: {
+                            eventId: eventId,
+                        },
+                        data: {
+                            phone: req.body.organizer_details[0].phone,
+                            email: req.body.organizer_details[0].email
+                        }
+                    }
                 }
-
             }
-        })
-        res.status(200).json({eventId: event.id})
-    } catch (error) {
-        console.log('error in update event', error);
-        res.status(500).json({ message: 'Internal Server Error' })
-    }
-})
+        });
 
-userRouter.delete('/:eventId', userMiddleware,async(req,res)=>{
+        res.status(200).json({ eventId: event.id });
+    } catch (error) {
+        console.log('Error in update event:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+userRouter.delete('/:eventId', userMiddleware, async (req, res) => {
     const eventId = req.params.eventId;
     try {
         const event = await client.event.delete({
-            where:{
+            where: {
                 id: eventId,
                 creatorId: req.userId
             }
         })
-        res.json({eventId: event.id})
+        res.json({ eventId: event.id })
     } catch (error) {
         console.log('error in delete event', error);
+        res.status(500).json({ message: 'Internal Server Error' })
+    }
+})
+
+userRouter.post('/update/password', userMiddleware, async (req, res) => {
+    try {
+        const user = await client.user.findUnique({
+            where: {
+                id: req.userId
+            }
+        })
+        
+        if (!user) {
+            res.status(404).json({ message: 'User not found' });
+            return
+        }
+
+        if (req.body.current_password) {
+            const isValid = bcrypt.compareSync(req.body.current_password, user.password)
+            if (!isValid) {
+                res.status(401).json({ message: 'Invalid current password' })
+                return
+            }
+
+        }
+
+        // update with req.body.new_password
+        const saltRounds = 10;
+        const salt = bcrypt.genSaltSync(saltRounds)
+        const hashedPassword = bcrypt.hashSync(req.body.new_password, salt)
+        const userUpdate = await client.user.update({
+            where: {
+                id: req.userId
+            },
+            data: {
+                password: hashedPassword
+            }
+        })
+        res.json({ userId: userUpdate.id })
+    } catch (error) {
+        console.log('error in update password', error);
         res.status(500).json({ message: 'Internal Server Error' })
     }
 })

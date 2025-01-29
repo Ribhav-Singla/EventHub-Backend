@@ -41,7 +41,7 @@ exports.eventRouter.post('/', user_1.userMiddleware, (req, res) => __awaiter(voi
                 creatorId: req.userId,
                 location: {
                     create: [{
-                            venue: req.body.location[0].venu,
+                            venue: req.body.location[0].venue,
                             city: req.body.location[0].city,
                             country: req.body.location[0].country
                         }]

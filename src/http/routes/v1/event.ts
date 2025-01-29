@@ -6,7 +6,7 @@ import moment from 'moment-timezone'
 export const eventRouter = express.Router()
 
 eventRouter.post('/', userMiddleware, async (req, res) => {
-    console.log('inside event');
+    console.log('inside event');    
     try {
         if (!req.userId) {
             res.status(401).json({ message: 'Unauthorized' })
@@ -28,7 +28,7 @@ eventRouter.post('/', userMiddleware, async (req, res) => {
                 creatorId: req.userId,
                 location: {
                     create: [{
-                        venue: req.body.location[0].venu,
+                        venue: req.body.location[0].venue,
                         city: req.body.location[0].city,
                         country: req.body.location[0].country
                     }]
