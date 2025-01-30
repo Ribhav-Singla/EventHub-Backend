@@ -38,14 +38,28 @@ userRouter.post("/wishlist/:eventId", userMiddleware, async (req, res) => {
 });
 
 userRouter.get("/events", userMiddleware, async (req, res) => {
+    const category = req.query.category || "all"
+    const title = req.query.title || ""
     const limit = 6;
     const page = Number(req.query.page) || 1;
     const skip = (page - 1) * limit;
     try {
+
+        const filter: any = {
+            creatorId: req.userId
+        }
+        if (category !== "all") {
+            filter.category = category
+        }
+        if (title) {
+            filter.title = {
+                contains: title,
+                mode: "insensitive"
+            }
+        }
+
         const events = await client.event.findMany({
-            where: {
-                creatorId: req.userId,
-            },
+            where: filter,
             select: {
                 id: true,
                 title: true,
@@ -65,9 +79,7 @@ userRouter.get("/events", userMiddleware, async (req, res) => {
         });
 
         const total_events = await client.event.count({
-            where: {
-                creatorId: req.userId,
-            },
+            where: filter
         });
 
         res.json({
@@ -81,14 +93,24 @@ userRouter.get("/events", userMiddleware, async (req, res) => {
 });
 
 userRouter.get("/wishlist", userMiddleware, async (req, res) => {
+    const category = req.query.category || "all"
     const limit = 6;
     const page = Number(req.query.page) || 1;
     const skip = (page - 1) * limit;
     try {
+
+        let filter = {
+            userId: req.userId
+        }
+        if (category != "all") {
+            // @ts-ignore
+            filter.event = {
+                category: category
+            }
+        }
+
         const wishlist = await client.wishlist.findMany({
-            where: {
-                userId: req.userId
-            },
+            where: filter,
             select: {
                 id: true,
                 event: {
@@ -111,9 +133,7 @@ userRouter.get("/wishlist", userMiddleware, async (req, res) => {
         })
 
         const wishlistCount = await client.wishlist.count({
-            where: {
-                userId: req.userId
-            }
+            where: filter
         })
 
         res.json({
@@ -254,7 +274,7 @@ userRouter.post('/update/password', userMiddleware, async (req, res) => {
                 id: req.userId
             }
         })
-        
+
         if (!user) {
             res.status(404).json({ message: 'User not found' });
             return

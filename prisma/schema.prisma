@@ -15,7 +15,8 @@ datasource db {
 
 model User {
   id          String        @id @unique @default(cuid())
-  username    String?
+  firstname   String
+  lastname    String?
   email       String        @unique
   password    String
   events      Event[]
@@ -31,9 +32,9 @@ model Event {
   type              String
   category          String
   description       String
-  price             String
-  total_tickets     String
-  tickets_sold      String
+  price             Int
+  total_tickets     Int
+  tickets_sold      Int
   date              DateTime
   time_frame        Json
   images            String[]
@@ -71,7 +72,7 @@ model Transaction {
   eventId        String?
   event          Event?         @relation(fields: [eventId], references: [id], onDelete: SetNull)
   ticket_count   Int
-  amount         String
+  amount         Int
   seat_category  String
   attendee_type  ATTENDEE
   ticket_details TicketDetail[]
@@ -83,7 +84,7 @@ model TicketDetail {
   transactionId String
   transaction   Transaction @relation(fields: [transactionId], references: [id])
   name          String
-  age           String
+  age           Int
 }
 
 model Wishlist {

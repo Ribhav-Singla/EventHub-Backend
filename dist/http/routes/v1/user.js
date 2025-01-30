@@ -52,14 +52,26 @@ exports.userRouter.post("/wishlist/:eventId", user_1.userMiddleware, (req, res) 
     }
 }));
 exports.userRouter.get("/events", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const category = req.query.category || "all";
+    const title = req.query.title || "";
     const limit = 6;
     const page = Number(req.query.page) || 1;
     const skip = (page - 1) * limit;
     try {
+        const filter = {
+            creatorId: req.userId
+        };
+        if (category !== "all") {
+            filter.category = category;
+        }
+        if (title) {
+            filter.title = {
+                contains: title,
+                mode: "insensitive"
+            };
+        }
         const events = yield index_1.default.event.findMany({
-            where: {
-                creatorId: req.userId,
-            },
+            where: filter,
             select: {
                 id: true,
                 title: true,
@@ -78,9 +90,7 @@ exports.userRouter.get("/events", user_1.userMiddleware, (req, res) => __awaiter
             skip: skip,
         });
         const total_events = yield index_1.default.event.count({
-            where: {
-                creatorId: req.userId,
-            },
+            where: filter
         });
         res.json({
             events,
@@ -93,14 +103,22 @@ exports.userRouter.get("/events", user_1.userMiddleware, (req, res) => __awaiter
     }
 }));
 exports.userRouter.get("/wishlist", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const category = req.query.category || "all";
     const limit = 6;
     const page = Number(req.query.page) || 1;
     const skip = (page - 1) * limit;
     try {
+        let filter = {
+            userId: req.userId
+        };
+        if (category != "all") {
+            // @ts-ignore
+            filter.event = {
+                category: category
+            };
+        }
         const wishlist = yield index_1.default.wishlist.findMany({
-            where: {
-                userId: req.userId
-            },
+            where: filter,
             select: {
                 id: true,
                 event: {
@@ -122,9 +140,7 @@ exports.userRouter.get("/wishlist", user_1.userMiddleware, (req, res) => __await
             skip: skip,
         });
         const wishlistCount = yield index_1.default.wishlist.count({
-            where: {
-                userId: req.userId
-            }
+            where: filter
         });
         res.json({
             wishlist,
