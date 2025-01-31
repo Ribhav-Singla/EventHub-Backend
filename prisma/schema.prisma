@@ -14,16 +14,21 @@ datasource db {
 }
 
 model User {
-  id          String        @id @unique @default(cuid())
-  firstname   String
-  lastname    String?
-  email       String        @unique
-  password    String
-  events      Event[]
-  transaction Transaction[]
-  wishlist    Wishlist[]
-  created_at  DateTime      @default(now())
-  updated_at  DateTime      @updatedAt
+  id                      String        @id @unique @default(cuid())
+  firstname               String
+  lastname                String?
+  email                   String        @unique
+  password                String
+  phone                   String?
+  bio                     String?
+  linkedIn                String?
+  twitter                 String?
+  newsletter_subscription Boolean       @default(false)
+  events                  Event[]
+  transaction             Transaction[]
+  wishlist                Wishlist[]
+  created_at              DateTime      @default(now())
+  updated_at              DateTime      @updatedAt
 }
 
 model Event {
@@ -33,7 +38,7 @@ model Event {
   category          String
   description       String
   price             Int
-  total_tickets     Int
+  total_tickets     Int?
   tickets_sold      Int
   date              DateTime
   time_frame        Json

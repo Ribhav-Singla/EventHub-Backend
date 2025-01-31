@@ -23,7 +23,8 @@ router.post('/signup', async (req, res) => {
     try {
         const user = await client.user.create({
             data: {
-                username: req.body.username,
+                firstname: req.body.firstname,
+                lastname: req.body.lastname,
                 email: req.body.email,
                 password: hashedPassword,
             }
@@ -33,7 +34,8 @@ router.post('/signup', async (req, res) => {
         }, JWT_PASSWORD);
 
         res.json({
-            username: user.username,
+            firstname: user.firstname,
+            lastname: user.lastname,
             email: user.email,
             avatar: 'https://avatar.iran.liara.run/public',
             token: token
@@ -73,7 +75,8 @@ router.post('/login', async (req, res) => {
         }, JWT_PASSWORD);
 
         res.json({
-            username: user.username,
+            firstname: user.firstname,
+            lastname: user.lastname,
             email: user.email,
             avatar: 'https://avatar.iran.liara.run/public',
             token: token
@@ -98,7 +101,8 @@ router.post('/me', userMiddleware, async (req, res) => {
             return
         }
         res.json({
-            username: user.username,
+            firstname: user.firstname,
+            lastname: user.lastname,
             email: user.email,
             avatar: 'https://avatar.iran.liara.run/public'
         })
@@ -109,4 +113,4 @@ router.post('/me', userMiddleware, async (req, res) => {
 
 router.use('/upload_images', imageRouter)
 router.use('/event', eventRouter)
-router.use('/user',userRouter)
+router.use('/user', userRouter)

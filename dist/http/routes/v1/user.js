@@ -152,6 +152,32 @@ exports.userRouter.get("/wishlist", user_1.userMiddleware, (req, res) => __await
         res.status(500).json({ message: "Internal Server Error" });
     }
 }));
+exports.userRouter.get('/profile/data', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('inside profile');
+    try {
+        const user = yield index_1.default.user.findUnique({
+            where: {
+                id: req.userId
+            },
+            select: {
+                id: true,
+                firstname: true,
+                lastname: true,
+                email: true,
+                phone: true,
+                bio: true,
+                linkedIn: true,
+                twitter: true,
+                newsletter_subscription: true,
+            }
+        });
+        res.json(user);
+    }
+    catch (error) {
+        console.log('error in get profile', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}));
 exports.userRouter.get('/:eventId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const eventId = req.params.eventId;
     try {
@@ -217,7 +243,6 @@ exports.userRouter.put('/:eventId', user_1.userMiddleware, (req, res) => __await
                 description: req.body.description,
                 price: req.body.price,
                 total_tickets: req.body.total_tickets,
-                tickets_sold: '0',
                 date: isoDate,
                 time_frame: req.body.time_frame,
                 images: req.body.images,

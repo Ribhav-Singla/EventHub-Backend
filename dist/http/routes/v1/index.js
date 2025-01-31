@@ -34,7 +34,8 @@ exports.router.post('/signup', (req, res) => __awaiter(void 0, void 0, void 0, f
     try {
         const user = yield index_1.default.user.create({
             data: {
-                username: req.body.username,
+                firstname: req.body.firstname,
+                lastname: req.body.lastname,
                 email: req.body.email,
                 password: hashedPassword,
             }
@@ -43,7 +44,8 @@ exports.router.post('/signup', (req, res) => __awaiter(void 0, void 0, void 0, f
             userId: user.id
         }, config_1.JWT_PASSWORD);
         res.json({
-            username: user.username,
+            firstname: user.firstname,
+            lastname: user.lastname,
             email: user.email,
             avatar: 'https://avatar.iran.liara.run/public',
             token: token
@@ -82,7 +84,8 @@ exports.router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, fu
             userId: user.id
         }, config_1.JWT_PASSWORD);
         res.json({
-            username: user.username,
+            firstname: user.firstname,
+            lastname: user.lastname,
             email: user.email,
             avatar: 'https://avatar.iran.liara.run/public',
             token: token
@@ -106,7 +109,8 @@ exports.router.post('/me', user_1.userMiddleware, (req, res) => __awaiter(void 0
             return;
         }
         res.json({
-            username: user.username,
+            firstname: user.firstname,
+            lastname: user.lastname,
             email: user.email,
             avatar: 'https://avatar.iran.liara.run/public'
         });

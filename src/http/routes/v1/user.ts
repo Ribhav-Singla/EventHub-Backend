@@ -146,6 +146,32 @@ userRouter.get("/wishlist", userMiddleware, async (req, res) => {
     }
 });
 
+userRouter.get('/profile/data', userMiddleware, async (req, res) => {
+    console.log('inside profile');
+    try {
+        const user = await client.user.findUnique({
+            where: {
+                id: req.userId
+            },
+            select: {
+                id: true,
+                firstname: true,
+                lastname: true,
+                email: true,
+                phone: true,
+                bio: true,
+                linkedIn: true,
+                twitter: true,
+                newsletter_subscription: true,
+            }
+        })
+        res.json(user)
+    } catch (error) {
+        console.log('error in get profile', error);
+        res.status(500).json({ message: 'Internal Server Error' })
+    }
+})
+
 userRouter.get('/:eventId', async (req, res) => {
     const eventId = req.params.eventId
     try {
@@ -213,7 +239,6 @@ userRouter.put('/:eventId', userMiddleware, async (req, res) => {
                 description: req.body.description,
                 price: req.body.price,
                 total_tickets: req.body.total_tickets,
-                tickets_sold: '0',
                 date: isoDate,
                 time_frame: req.body.time_frame,
                 images: req.body.images,
@@ -307,3 +332,4 @@ userRouter.post('/update/password', userMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' })
     }
 })
+
