@@ -71,25 +71,38 @@ model Organizer {
 }
 
 model Transaction {
-  id             String         @id @default(cuid())
+  id             String   @id @default(cuid())
   userId         String
-  user           User           @relation(fields: [userId], references: [id])
+  user           User     @relation(fields: [userId], references: [id])
   eventId        String?
-  event          Event?         @relation(fields: [eventId], references: [id], onDelete: SetNull)
-  ticket_count   Int
+  event          Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
   amount         Int
-  seat_category  String
-  attendee_type  ATTENDEE
-  ticket_details TicketDetail[]
-  created_at     DateTime       @default(now())
+  ticket_details Ticket[]
+  created_at     DateTime @default(now())
 }
 
-model TicketDetail {
-  id            String      @id @default(cuid())
-  transactionId String
-  transaction   Transaction @relation(fields: [transactionId], references: [id])
-  name          String
-  age           Int
+model Ticket {
+  id              String      @id @default(cuid())
+  transactionId   String      
+  transaction     Transaction @relation(fields: [transactionId], references: [id])
+  ticket_quantity Int
+  ticket_category String
+  ticket_price    Int
+  attendee        Attendee[]
+  payment_type    String
+  event_title     String
+  event_category  String
+  event_date      DateTime
+  event_venue     String
+  event_time      DateTime
+}
+
+model Attendee {
+  id       String @id @default(cuid())
+  ticketId String 
+  ticket   Ticket @relation(fields: [ticketId], references: [id])
+  name     String
+  age      Int
 }
 
 model Wishlist {
@@ -99,10 +112,4 @@ model Wishlist {
   eventId String?
   event   Event?   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   addedAt DateTime @default(now())
-}
-
-enum ATTENDEE {
-  Attendee
-  Delegate
-  Visitor
 }

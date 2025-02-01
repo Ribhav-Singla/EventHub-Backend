@@ -177,7 +177,6 @@ userRouter.get("/wishlist", userMiddleware, async (req, res) => {
     }
 });
 
-
 userRouter.get('/profile/data', userMiddleware, async (req, res) => {
     console.log('inside profile');
     try {
@@ -388,4 +387,81 @@ userRouter.post('/update/password', userMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' })
     }
 })
+
+userRouter.post('/ticket/transaction/:eventId', userMiddleware, async (req, res) => {
+    console.log('inside transaction');
+
+    if (!req.userId || typeof req.userId !== 'string') {
+        res.status(401).json({ message: 'Unauthorized' });
+        return;
+    }
+
+    try {
+        const ticket_transaction = await client.$transaction(async (client) => {
+            const event = await client.event.findUnique({
+                where: {
+                    id: req.params.eventId,
+                },
+            });
+
+            if (!event) {
+                res.status(404).json({ message: 'Event not found' });
+                return;
+            }
+
+            if (event.total_tickets === null || event.total_tickets - event.tickets_sold >= req.body.ticket_quantity) {
+                await client.event.update({
+                    where: {
+                        id: req.params.eventId,
+                    },
+                    data: {
+                        tickets_sold: event.tickets_sold + req.body.ticket_quantity,
+                    },
+                });
+
+                if (!req.userId) {
+                    throw new Error('User ID is undefined');
+                }
+
+                const transaction = await client.transaction.create({
+                    data: {
+                        userId: req.userId,
+                        eventId: req.params.eventId,
+                        amount: req.body.ticket_amount,
+                        ticket_details: {
+                            create: [
+                                {
+                                    ticket_quantity: req.body.ticket_quantity,
+                                    ticket_category: req.body.ticket_category,
+                                    ticket_price: req.body.ticket_price,
+                                    payment_type: req.body.payment_type,
+                                    event_title: req.body.event_title,
+                                    event_category: req.body.event_category,
+                                    event_date: req.body.event_date,
+                                    event_venue: req.body.event_venue,
+                                    event_time: req.body.event_time,
+                                    attendee: {
+                                        create: req.body.attendees.map((attendee: any) => ({
+                                            name: attendee.name,
+                                            age: attendee.age,
+                                        })),
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                });
+
+                res.status(201).json({
+                    transactionId: transaction.id,
+                });
+            } else {
+                res.status(400).json({ message: 'Not enough tickets available' });
+            }
+        });
+    } catch (error) {
+        console.error('Transaction error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
 
