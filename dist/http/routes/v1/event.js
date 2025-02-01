@@ -113,6 +113,16 @@ exports.eventRouter.get("/", (req, res) => __awaiter(void 0, void 0, void 0, fun
                 filters.price.lte = Number(req.query.max_price);
             }
         }
+        // Date Filter
+        if (req.query.start_date || req.query.end_date) {
+            filters.date = {};
+            if (typeof req.query.start_date === "string" && !isNaN(Date.parse(req.query.start_date))) {
+                filters.date.gte = new Date(`${req.query.start_date}T00:00:00Z`);
+            }
+            if (typeof req.query.end_date === "string" && !isNaN(Date.parse(req.query.end_date))) {
+                filters.date.lte = new Date(`${req.query.end_date}T23:59:59Z`);
+            }
+        }
         console.log("Generated Filters:", filters); // Debugging
         // Fetch events with filters
         const fetched_events = yield index_1.default.event.findMany({

@@ -56,7 +56,6 @@ eventRouter.post("/", userMiddleware, async (req, res) => {
 
 eventRouter.get("/", async (req, res) => {
     console.log(req.query);
-
     const limit = 9;
     const page = Number(req.query.page) || 1;
     const skip = (page - 1) * limit;
@@ -112,6 +111,19 @@ eventRouter.get("/", async (req, res) => {
                 filters.price.lte = Number(req.query.max_price);
             }
         }
+
+        // Date Filter
+        if (req.query.start_date || req.query.end_date) {
+            filters.date = {};
+
+            if (typeof req.query.start_date === "string" && !isNaN(Date.parse(req.query.start_date))) {
+                filters.date.gte = new Date(`${req.query.start_date}T00:00:00Z`);
+            }
+            if (typeof req.query.end_date === "string" && !isNaN(Date.parse(req.query.end_date))) {
+                filters.date.lte = new Date(`${req.query.end_date}T23:59:59Z`);
+            }
+        }
+
 
         console.log("Generated Filters:", filters); // Debugging
 

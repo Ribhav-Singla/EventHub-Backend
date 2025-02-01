@@ -2,6 +2,7 @@ import express from "express";
 import { userMiddleware } from "../../middleware/user";
 import client from "../../../db/index";
 import bcrypt from 'bcrypt';
+import moment from "moment-timezone";
 
 export const userRouter = express.Router();
 
@@ -38,6 +39,7 @@ userRouter.post("/wishlist/:eventId", userMiddleware, async (req, res) => {
 });
 
 userRouter.get("/events", userMiddleware, async (req, res) => {
+    const status = req.query.status || "all"
     const category = req.query.category || "all"
     const title = req.query.title || ""
     const limit = 6;
@@ -55,6 +57,18 @@ userRouter.get("/events", userMiddleware, async (req, res) => {
             filter.title = {
                 contains: title,
                 mode: "insensitive"
+            }
+        }
+        if (status !== "all") {
+            const currentDateTimeIST = moment
+                .utc()
+                .add(5, "hours")
+                .add(30, "minutes")
+                .format("YYYY-MM-DDTHH:mm:ss[Z]");
+            if (status === "active") {
+                filter.date = { gte: currentDateTimeIST };
+            } else if (status === "closed") {
+                filter.date = { lt: currentDateTimeIST };
             }
         }
 
@@ -93,19 +107,36 @@ userRouter.get("/events", userMiddleware, async (req, res) => {
 });
 
 userRouter.get("/wishlist", userMiddleware, async (req, res) => {
-    const category = req.query.category || "all"
+    const category = req.query.category || "all";
+    const status = req.query.status || "all";
     const limit = 6;
     const page = Number(req.query.page) || 1;
     const skip = (page - 1) * limit;
-    try {
 
-        let filter = {
-            userId: req.userId
+    try {
+        let filter: any = {
+            userId: req.userId,
+        };
+
+        if (category !== "all") {
+            filter.event = { category };
         }
-        if (category != "all") {
-            // @ts-ignore
-            filter.event = {
-                category: category
+
+        if (status !== "all") {
+            const currentDateTimeIST = moment
+                .utc()
+                .add(5, "hours")
+                .add(30, "minutes")
+                .format("YYYY-MM-DDTHH:mm:ss[Z]");
+
+            if (!filter.event) {
+                filter.event = {};
+            }
+
+            if (status === "active") {
+                filter.event.date = { gte: currentDateTimeIST };
+            } else if (status === "closed") {
+                filter.event.date = { lt: currentDateTimeIST };
             }
         }
 
@@ -120,31 +151,32 @@ userRouter.get("/wishlist", userMiddleware, async (req, res) => {
                         location: {
                             select: {
                                 city: true,
-                                country: true
-                            }
+                                country: true,
+                            },
                         },
                         date: true,
                         price: true,
-                    }
-                }
+                    },
+                },
             },
             take: limit,
             skip: skip,
-        })
+        });
 
         const wishlistCount = await client.wishlist.count({
-            where: filter
-        })
+            where: filter,
+        });
 
         res.json({
             wishlist,
-            wishlistCount
+            wishlistCount,
         });
     } catch (error) {
-        console.error("error occured in wishlist ", error);
+        console.error("Error occurred in wishlist:", error);
         res.status(500).json({ message: "Internal Server Error" });
     }
 });
+
 
 userRouter.get('/profile/data', userMiddleware, async (req, res) => {
     console.log('inside profile');
@@ -224,7 +256,8 @@ userRouter.put('/:eventId', userMiddleware, async (req, res) => {
         if (/^\d{4}-\d{2}-\d{2}$/.test(req.body.date)) {
             isoDate = new Date(`${req.body.date}T${req.body.time_frame[0].time}Z`);
         } else {
-            isoDate = req.body.date;
+            const extractedDate = req.body.date.split("T")[0];
+            isoDate = new Date(`${extractedDate}T${req.body.time_frame[0].time}Z`);
         }
 
         const event = await client.event.update({

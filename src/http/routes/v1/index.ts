@@ -37,7 +37,7 @@ router.post('/signup', async (req, res) => {
             firstname: user.firstname,
             lastname: user.lastname,
             email: user.email,
-            avatar: 'https://avatar.iran.liara.run/public',
+            avatar: '',
             token: token
         })
     } catch (error) {
@@ -78,7 +78,7 @@ router.post('/login', async (req, res) => {
             firstname: user.firstname,
             lastname: user.lastname,
             email: user.email,
-            avatar: 'https://avatar.iran.liara.run/public',
+            avatar: '',
             token: token
         })
 
@@ -104,7 +104,7 @@ router.post('/me', userMiddleware, async (req, res) => {
             firstname: user.firstname,
             lastname: user.lastname,
             email: user.email,
-            avatar: 'https://avatar.iran.liara.run/public'
+            avatar: ''
         })
     } catch (error) {
         res.status(500).json({ message: "Internal server error" })

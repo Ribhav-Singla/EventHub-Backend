@@ -17,6 +17,7 @@ const express_1 = __importDefault(require("express"));
 const user_1 = require("../../middleware/user");
 const index_1 = __importDefault(require("../../../db/index"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
+const moment_timezone_1 = __importDefault(require("moment-timezone"));
 exports.userRouter = express_1.default.Router();
 exports.userRouter.post("/wishlist/:eventId", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("inside wishlist");
@@ -52,6 +53,7 @@ exports.userRouter.post("/wishlist/:eventId", user_1.userMiddleware, (req, res) 
     }
 }));
 exports.userRouter.get("/events", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const status = req.query.status || "all";
     const category = req.query.category || "all";
     const title = req.query.title || "";
     const limit = 6;
@@ -69,6 +71,19 @@ exports.userRouter.get("/events", user_1.userMiddleware, (req, res) => __awaiter
                 contains: title,
                 mode: "insensitive"
             };
+        }
+        if (status !== "all") {
+            const currentDateTimeIST = moment_timezone_1.default
+                .utc()
+                .add(5, "hours")
+                .add(30, "minutes")
+                .format("YYYY-MM-DDTHH:mm:ss[Z]");
+            if (status === "active") {
+                filter.date = { gte: currentDateTimeIST };
+            }
+            else if (status === "closed") {
+                filter.date = { lt: currentDateTimeIST };
+            }
         }
         const events = yield index_1.default.event.findMany({
             where: filter,
@@ -104,18 +119,32 @@ exports.userRouter.get("/events", user_1.userMiddleware, (req, res) => __awaiter
 }));
 exports.userRouter.get("/wishlist", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const category = req.query.category || "all";
+    const status = req.query.status || "all";
     const limit = 6;
     const page = Number(req.query.page) || 1;
     const skip = (page - 1) * limit;
     try {
         let filter = {
-            userId: req.userId
+            userId: req.userId,
         };
-        if (category != "all") {
-            // @ts-ignore
-            filter.event = {
-                category: category
-            };
+        if (category !== "all") {
+            filter.event = { category };
+        }
+        if (status !== "all") {
+            const currentDateTimeIST = moment_timezone_1.default
+                .utc()
+                .add(5, "hours")
+                .add(30, "minutes")
+                .format("YYYY-MM-DDTHH:mm:ss[Z]");
+            if (!filter.event) {
+                filter.event = {};
+            }
+            if (status === "active") {
+                filter.event.date = { gte: currentDateTimeIST };
+            }
+            else if (status === "closed") {
+                filter.event.date = { lt: currentDateTimeIST };
+            }
         }
         const wishlist = yield index_1.default.wishlist.findMany({
             where: filter,
@@ -128,27 +157,27 @@ exports.userRouter.get("/wishlist", user_1.userMiddleware, (req, res) => __await
                         location: {
                             select: {
                                 city: true,
-                                country: true
-                            }
+                                country: true,
+                            },
                         },
                         date: true,
                         price: true,
-                    }
-                }
+                    },
+                },
             },
             take: limit,
             skip: skip,
         });
         const wishlistCount = yield index_1.default.wishlist.count({
-            where: filter
+            where: filter,
         });
         res.json({
             wishlist,
-            wishlistCount
+            wishlistCount,
         });
     }
     catch (error) {
-        console.error("error occured in wishlist ", error);
+        console.error("Error occurred in wishlist:", error);
         res.status(500).json({ message: "Internal Server Error" });
     }
 }));
@@ -223,14 +252,17 @@ exports.userRouter.get('/:eventId', (req, res) => __awaiter(void 0, void 0, void
 exports.userRouter.put('/:eventId', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('Inside update');
     const eventId = req.params.eventId;
+    console.log('date received:', req.body.date);
     try {
         let isoDate;
         if (/^\d{4}-\d{2}-\d{2}$/.test(req.body.date)) {
             isoDate = new Date(`${req.body.date}T${req.body.time_frame[0].time}Z`);
         }
         else {
-            isoDate = req.body.date;
+            const extractedDate = req.body.date.split("T")[0];
+            isoDate = new Date(`${extractedDate}T${req.body.time_frame[0].time}Z`);
         }
+        console.log('isodate: ', isoDate);
         const event = yield index_1.default.event.update({
             where: {
                 id: eventId,

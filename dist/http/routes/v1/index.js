@@ -47,7 +47,7 @@ exports.router.post('/signup', (req, res) => __awaiter(void 0, void 0, void 0, f
             firstname: user.firstname,
             lastname: user.lastname,
             email: user.email,
-            avatar: 'https://avatar.iran.liara.run/public',
+            avatar: '',
             token: token
         });
     }
@@ -87,7 +87,7 @@ exports.router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, fu
             firstname: user.firstname,
             lastname: user.lastname,
             email: user.email,
-            avatar: 'https://avatar.iran.liara.run/public',
+            avatar: '',
             token: token
         });
     }
@@ -112,7 +112,7 @@ exports.router.post('/me', user_1.userMiddleware, (req, res) => __awaiter(void 0
             firstname: user.firstname,
             lastname: user.lastname,
             email: user.email,
-            avatar: 'https://avatar.iran.liara.run/public'
+            avatar: ''
         });
     }
     catch (error) {
