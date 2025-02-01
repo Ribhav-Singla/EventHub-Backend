@@ -1,12 +1,25 @@
-import express from "express";
-import { userMiddleware } from "../../middleware/user";
-import client from "../../../db/index";
-import bcrypt from 'bcrypt';
-import moment from "moment-timezone";
-
-export const userRouter = express.Router();
-
-userRouter.post("/wishlist/:eventId", userMiddleware, async (req, res) => {
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.userRouter = void 0;
+const express_1 = __importDefault(require("express"));
+const user_1 = require("../../middleware/user");
+const index_1 = __importDefault(require("../../../db/index"));
+const bcrypt_1 = __importDefault(require("bcrypt"));
+const moment_timezone_1 = __importDefault(require("moment-timezone"));
+exports.userRouter = express_1.default.Router();
+exports.userRouter.post("/wishlist/:eventId", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("inside wishlist");
     const eventId = req.params.eventId;
     if (!req.userId) {
@@ -16,15 +29,16 @@ userRouter.post("/wishlist/:eventId", userMiddleware, async (req, res) => {
     const heart = req.body.heart;
     try {
         if (!heart) {
-            const wishlist = await client.wishlist.deleteMany({
+            const wishlist = yield index_1.default.wishlist.deleteMany({
                 where: {
                     userId: req.userId,
                     eventId: eventId,
                 },
             });
             res.json(wishlist);
-        } else {
-            const wishlist = await client.wishlist.create({
+        }
+        else {
+            const wishlist = yield index_1.default.wishlist.create({
                 data: {
                     userId: req.userId,
                     eventId: eventId,
@@ -32,47 +46,46 @@ userRouter.post("/wishlist/:eventId", userMiddleware, async (req, res) => {
             });
             res.json(wishlist);
         }
-    } catch (error) {
+    }
+    catch (error) {
         console.error("error occured in wishlist ", error);
         res.status(500).json({ message: "Internal Server Error" });
     }
-});
-
-userRouter.get("/events", userMiddleware, async (req, res) => {
-    const status = req.query.status || "all"
-    const category = req.query.category || "all"
-    const title = req.query.title || ""
+}));
+exports.userRouter.get("/events", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const status = req.query.status || "all";
+    const category = req.query.category || "all";
+    const title = req.query.title || "";
     const limit = 6;
     const page = Number(req.query.page) || 1;
     const skip = (page - 1) * limit;
     try {
-
-        const filter: any = {
+        const filter = {
             creatorId: req.userId
-        }
+        };
         if (category !== "all") {
-            filter.category = category
+            filter.category = category;
         }
         if (title) {
             filter.title = {
                 contains: title,
                 mode: "insensitive"
-            }
+            };
         }
         if (status !== "all") {
-            const currentDateTimeIST = moment
+            const currentDateTimeIST = moment_timezone_1.default
                 .utc()
                 .add(5, "hours")
                 .add(30, "minutes")
                 .format("YYYY-MM-DDTHH:mm:ss[Z]");
             if (status === "active") {
                 filter.date = { gte: currentDateTimeIST };
-            } else if (status === "closed") {
+            }
+            else if (status === "closed") {
                 filter.date = { lt: currentDateTimeIST };
             }
         }
-
-        const events = await client.event.findMany({
+        const events = yield index_1.default.event.findMany({
             where: filter,
             select: {
                 id: true,
@@ -91,56 +104,49 @@ userRouter.get("/events", userMiddleware, async (req, res) => {
             take: limit,
             skip: skip,
         });
-
-        const total_events = await client.event.count({
+        const total_events = yield index_1.default.event.count({
             where: filter
         });
-
         res.json({
             events,
             total_events,
         });
-    } catch (error) {
+    }
+    catch (error) {
         console.error("error occured in events ", error);
         res.status(500).json({ message: "Internal Server Error" });
     }
-});
-
-userRouter.get("/wishlist", userMiddleware, async (req, res) => {
+}));
+exports.userRouter.get("/wishlist", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const category = req.query.category || "all";
     const status = req.query.status || "all";
     const limit = 6;
     const page = Number(req.query.page) || 1;
     const skip = (page - 1) * limit;
-
     try {
-        let filter: any = {
+        let filter = {
             userId: req.userId,
         };
-
         if (category !== "all") {
             filter.event = { category };
         }
-
         if (status !== "all") {
-            const currentDateTimeIST = moment
+            const currentDateTimeIST = moment_timezone_1.default
                 .utc()
                 .add(5, "hours")
                 .add(30, "minutes")
                 .format("YYYY-MM-DDTHH:mm:ss[Z]");
-
             if (!filter.event) {
                 filter.event = {};
             }
-
             if (status === "active") {
                 filter.event.date = { gte: currentDateTimeIST };
-            } else if (status === "closed") {
+            }
+            else if (status === "closed") {
                 filter.event.date = { lt: currentDateTimeIST };
             }
         }
-
-        const wishlist = await client.wishlist.findMany({
+        const wishlist = yield index_1.default.wishlist.findMany({
             where: filter,
             select: {
                 id: true,
@@ -162,26 +168,23 @@ userRouter.get("/wishlist", userMiddleware, async (req, res) => {
             take: limit,
             skip: skip,
         });
-
-        const wishlistCount = await client.wishlist.count({
+        const wishlistCount = yield index_1.default.wishlist.count({
             where: filter,
         });
-
         res.json({
             wishlist,
             wishlistCount,
         });
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error occurred in wishlist:", error);
         res.status(500).json({ message: "Internal Server Error" });
     }
-});
-
-
-userRouter.get('/profile/data', userMiddleware, async (req, res) => {
+}));
+exports.userRouter.get('/profile/data', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('inside profile');
     try {
-        const user = await client.user.findUnique({
+        const user = yield index_1.default.user.findUnique({
             where: {
                 id: req.userId
             },
@@ -196,41 +199,41 @@ userRouter.get('/profile/data', userMiddleware, async (req, res) => {
                 twitter: true,
                 newsletter_subscription: true,
             }
-        })
-        res.json(user)
-    } catch (error) {
-        console.log('error in get profile', error);
-        res.status(500).json({ message: 'Internal Server Error' })
+        });
+        res.json(user);
     }
-})
-
-userRouter.put('/profile/data',userMiddleware,async(req,res)=>{
+    catch (error) {
+        console.log('error in get profile', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}));
+exports.userRouter.put('/profile/data', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const user = await client.user.update({
-            where:{
-                id:req.userId
+        const user = yield index_1.default.user.update({
+            where: {
+                id: req.userId
             },
-            data:{
-                phone:req.body.phone,
-                bio:req.body.bio,
-                linkedIn:req.body.linkedIn,
-                twitter:req.body.twitter,
+            data: {
+                phone: req.body.phone,
+                bio: req.body.bio,
+                linkedIn: req.body.linkedIn,
+                twitter: req.body.twitter,
                 newsletter_subscription: req.body.newsletter_subscription
             }
-        })
+        });
         res.json({
             userId: user.id
-        })
-    } catch (error) {
-        console.log('error in update profile', error);
-        res.status(500).json({ message: 'Internal Server Error' })
+        });
     }
-})
-
-userRouter.get('/:eventId', async (req, res) => {
-    const eventId = req.params.eventId
+    catch (error) {
+        console.log('error in update profile', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}));
+exports.userRouter.get('/:eventId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const eventId = req.params.eventId;
     try {
-        const event = await client.event.findUnique({
+        const event = yield index_1.default.event.findUnique({
             where: {
                 id: eventId,
                 creatorId: req.userId
@@ -261,29 +264,27 @@ userRouter.get('/:eventId', async (req, res) => {
                     }
                 }
             }
-        })
-
-        res.status(200).json(event)
-    } catch (error) {
-        console.log('error in get event', error);
-        res.status(500).json({ message: 'Internal Server Error' })
+        });
+        res.status(200).json(event);
     }
-})
-
-userRouter.put('/:eventId', userMiddleware, async (req, res) => {
+    catch (error) {
+        console.log('error in get event', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}));
+exports.userRouter.put('/:eventId', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('Inside update');
     const eventId = req.params.eventId;
-
     try {
         let isoDate;
         if (/^\d{4}-\d{2}-\d{2}$/.test(req.body.date)) {
             isoDate = new Date(`${req.body.date}T${req.body.time_frame[0].time}Z`);
-        } else {
+        }
+        else {
             const extractedDate = req.body.date.split("T")[0];
             isoDate = new Date(`${extractedDate}T${req.body.time_frame[0].time}Z`);
         }
-
-        const event = await client.event.update({
+        const event = yield index_1.default.event.update({
             where: {
                 id: eventId,
                 creatorId: req.userId
@@ -324,68 +325,63 @@ userRouter.put('/:eventId', userMiddleware, async (req, res) => {
                 }
             }
         });
-
         res.status(200).json({ eventId: event.id });
-    } catch (error) {
+    }
+    catch (error) {
         console.log('Error in update event:', error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
-});
-
-userRouter.delete('/:eventId', userMiddleware, async (req, res) => {
+}));
+exports.userRouter.delete('/:eventId', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const eventId = req.params.eventId;
     try {
-        const event = await client.event.delete({
+        const event = yield index_1.default.event.delete({
             where: {
                 id: eventId,
                 creatorId: req.userId
             }
-        })
-        res.json({ eventId: event.id })
-    } catch (error) {
-        console.log('error in delete event', error);
-        res.status(500).json({ message: 'Internal Server Error' })
+        });
+        res.json({ eventId: event.id });
     }
-})
-
-userRouter.post('/update/password', userMiddleware, async (req, res) => {
+    catch (error) {
+        console.log('error in delete event', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}));
+exports.userRouter.post('/update/password', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const user = await client.user.findUnique({
+        const user = yield index_1.default.user.findUnique({
             where: {
                 id: req.userId
             }
-        })
-
+        });
         if (!user) {
             res.status(404).json({ message: 'User not found' });
-            return
+            return;
         }
-
         if (req.body.current_password) {
-            const isValid = bcrypt.compareSync(req.body.current_password, user.password)
+            const isValid = bcrypt_1.default.compareSync(req.body.current_password, user.password);
             if (!isValid) {
-                res.status(401).json({ message: 'Invalid current password' })
-                return
+                res.status(401).json({ message: 'Invalid current password' });
+                return;
             }
-
         }
-
         // update with req.body.new_password
         const saltRounds = 10;
-        const salt = bcrypt.genSaltSync(saltRounds)
-        const hashedPassword = bcrypt.hashSync(req.body.new_password, salt)
-        const userUpdate = await client.user.update({
+        const salt = bcrypt_1.default.genSaltSync(saltRounds);
+        const hashedPassword = bcrypt_1.default.hashSync(req.body.new_password, salt);
+        const userUpdate = yield index_1.default.user.update({
             where: {
                 id: req.userId
             },
             data: {
                 password: hashedPassword
             }
-        })
-        res.json({ userId: userUpdate.id })
-    } catch (error) {
-        console.log('error in update password', error);
-        res.status(500).json({ message: 'Internal Server Error' })
+        });
+        res.json({ userId: userUpdate.id });
     }
-})
-
+    catch (error) {
+        console.log('error in update password', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}));
