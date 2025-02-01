@@ -203,17 +203,17 @@ userRouter.get('/profile/data', userMiddleware, async (req, res) => {
     }
 })
 
-userRouter.put('/profile/data',userMiddleware,async(req,res)=>{
+userRouter.put('/profile/data', userMiddleware, async (req, res) => {
     try {
         const user = await client.user.update({
-            where:{
-                id:req.userId
+            where: {
+                id: req.userId
             },
-            data:{
-                phone:req.body.phone,
-                bio:req.body.bio,
-                linkedIn:req.body.linkedIn,
-                twitter:req.body.twitter,
+            data: {
+                phone: req.body.phone,
+                bio: req.body.bio,
+                linkedIn: req.body.linkedIn,
+                twitter: req.body.twitter,
                 newsletter_subscription: req.body.newsletter_subscription
             }
         })
@@ -464,4 +464,43 @@ userRouter.post('/ticket/transaction/:eventId', userMiddleware, async (req, res)
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
+userRouter.get('ticket/:transactionId', userMiddleware, async (req, res) => {
+    try {
+        const transaction = await client.transaction.findUnique({
+            where: {
+                id: req.params.transactionId
+            },
+            select: {
+                id: true,
+                amount: true,
+                ticket_details: {
+                    select: {
+                        event_title: true,
+                        event_date: true,
+                        event_venue: true,
+                        event_time: true,
+                        attendee: {
+                            select: {
+                                name: true,
+                                age: true
+                            }
+                        }
+                    }
+                }
+            }
+        })
+        if (!transaction) {
+            res.status(404).json({ message: 'Transaction not found' });
+            return
+        }
+        res.json({
+            transactionId: transaction.id,
+            ticket_details: transaction.ticket_details,
+        })
+    } catch (error) {
+        console.error('Transaction error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+})
 
