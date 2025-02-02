@@ -465,7 +465,7 @@ userRouter.post('/ticket/transaction/:eventId', userMiddleware, async (req, res)
     }
 });
 
-userRouter.get('ticket/:transactionId', userMiddleware, async (req, res) => {
+userRouter.get('/ticket/:transactionId', userMiddleware, async (req, res) => {
     try {
         const transaction = await client.transaction.findUnique({
             where: {
@@ -496,11 +496,77 @@ userRouter.get('ticket/:transactionId', userMiddleware, async (req, res) => {
         }
         res.json({
             transactionId: transaction.id,
-            ticket_details: transaction.ticket_details,
+            amount: transaction.amount,
+            ticket_details: transaction.ticket_details[0],
         })
     } catch (error) {
         console.error('Transaction error:', error);
         res.status(500).json({ message: 'Internal server error' });
+    }
+})
+
+userRouter.get('/transactions/bulk', userMiddleware, async (req, res) => {
+    console.log('inside bulk transactions');
+
+    const limit = 6;
+    const page = Number(req.query.page) || 1;
+    const skip = (page - 1) * limit;
+
+    try {
+        const transactions = await client.user.findUnique({
+            where: {
+                id: req.userId
+            },
+            select: {
+                _count: {
+                    select: {
+                        transaction: true,
+                    },
+                },
+                transaction: {
+                    select: {
+                        id: true,
+                        eventId : true,
+                        created_at:true,
+                        amount: true,
+                        ticket_details: {
+                            select: {
+                                ticket_category: true,
+                                ticket_quantity: true,
+                                ticket_price: true,
+                                attendee: {
+                                    select: {
+                                        name: true,
+                                        age: true
+                                    }
+                                },
+                                payment_type: true,
+                                event_title: true,
+                                event_category: true,
+                                event_date: true,
+                                event_venue: true,
+                                event_time: true,
+                            }
+                        }
+                    },
+                    skip: skip,
+                    take: limit,
+                    orderBy:{
+                        created_at: 'desc'
+                    }
+                }
+            }
+        })
+
+        const total_transactions = transactions?._count.transaction || 0;
+        res.json({
+            total_transactions,
+            transactions: transactions?.transaction
+        })
+    } catch (error) {
+        console.log('Error occured while fetching transactions');
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
     }
 })
 

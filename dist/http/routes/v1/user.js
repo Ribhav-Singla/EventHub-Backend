@@ -387,7 +387,6 @@ exports.userRouter.post('/update/password', user_1.userMiddleware, (req, res) =>
 }));
 exports.userRouter.post('/ticket/transaction/:eventId', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('inside transaction');
-    console.log(req.body);
     if (!req.userId || typeof req.userId !== 'string') {
         res.status(401).json({ message: 'Unauthorized' });
         return;
@@ -455,5 +454,107 @@ exports.userRouter.post('/ticket/transaction/:eventId', user_1.userMiddleware, (
     catch (error) {
         console.error('Transaction error:', error);
         res.status(500).json({ message: 'Internal server error' });
+    }
+}));
+exports.userRouter.get('/ticket/:transactionId', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const transaction = yield index_1.default.transaction.findUnique({
+            where: {
+                id: req.params.transactionId
+            },
+            select: {
+                id: true,
+                amount: true,
+                ticket_details: {
+                    select: {
+                        event_title: true,
+                        event_date: true,
+                        event_venue: true,
+                        event_time: true,
+                        attendee: {
+                            select: {
+                                name: true,
+                                age: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        if (!transaction) {
+            res.status(404).json({ message: 'Transaction not found' });
+            return;
+        }
+        res.json({
+            transactionId: transaction.id,
+            amount: transaction.amount,
+            ticket_details: transaction.ticket_details[0],
+        });
+    }
+    catch (error) {
+        console.error('Transaction error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}));
+exports.userRouter.get('/transactions/bulk', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('inside bulk transactions');
+    const limit = 6;
+    const page = Number(req.query.page) || 1;
+    const skip = (page - 1) * limit;
+    try {
+        const transactions = yield index_1.default.user.findUnique({
+            where: {
+                id: req.userId
+            },
+            select: {
+                _count: {
+                    select: {
+                        transaction: true,
+                    },
+                },
+                transaction: {
+                    select: {
+                        id: true,
+                        eventId: true,
+                        created_at: true,
+                        amount: true,
+                        ticket_details: {
+                            select: {
+                                ticket_category: true,
+                                ticket_quantity: true,
+                                ticket_price: true,
+                                attendee: {
+                                    select: {
+                                        name: true,
+                                        age: true
+                                    }
+                                },
+                                payment_type: true,
+                                event_title: true,
+                                event_category: true,
+                                event_date: true,
+                                event_venue: true,
+                                event_time: true,
+                            }
+                        }
+                    },
+                    skip: skip,
+                    take: limit,
+                    orderBy: {
+                        created_at: 'desc'
+                    }
+                }
+            }
+        });
+        const total_transactions = (transactions === null || transactions === void 0 ? void 0 : transactions._count.transaction) || 0;
+        res.json({
+            total_transactions,
+            transactions: transactions === null || transactions === void 0 ? void 0 : transactions.transaction
+        });
+    }
+    catch (error) {
+        console.log('Error occured while fetching transactions');
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
     }
 }));

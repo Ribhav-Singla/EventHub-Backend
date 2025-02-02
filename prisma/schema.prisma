@@ -92,7 +92,7 @@ model Ticket {
   payment_type    String
   event_title     String
   event_category  String
-  event_date      String
+  event_date      DateTime
   event_venue     String
   event_time      String
 }
