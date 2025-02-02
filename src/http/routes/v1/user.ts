@@ -435,11 +435,6 @@ userRouter.post('/ticket/transaction/:eventId', userMiddleware, async (req, res)
                                     ticket_category: req.body.ticket_category,
                                     ticket_price: req.body.ticket_price,
                                     payment_type: req.body.payment_type,
-                                    event_title: req.body.event_title,
-                                    event_category: req.body.event_category,
-                                    event_date: req.body.event_date,
-                                    event_venue: req.body.event_venue,
-                                    event_time: req.body.event_time,
                                     attendee: {
                                         create: req.body.attendees.map((attendee: any) => ({
                                             name: attendee.name,
@@ -474,12 +469,22 @@ userRouter.get('/ticket/:transactionId', userMiddleware, async (req, res) => {
             select: {
                 id: true,
                 amount: true,
+                event: {
+                    select: {
+                        title: true,
+                        date: true,
+                        time_frame: true,
+                        location: {
+                            select: {
+                                venue: true,
+                                city: true,
+                                country: true,
+                            }
+                        }
+                    }
+                },
                 ticket_details: {
                     select: {
-                        event_title: true,
-                        event_date: true,
-                        event_venue: true,
-                        event_time: true,
                         attendee: {
                             select: {
                                 name: true,
@@ -497,6 +502,7 @@ userRouter.get('/ticket/:transactionId', userMiddleware, async (req, res) => {
         res.json({
             transactionId: transaction.id,
             amount: transaction.amount,
+            event_details: transaction.event,
             ticket_details: transaction.ticket_details[0],
         })
     } catch (error) {
@@ -512,6 +518,87 @@ userRouter.get('/transactions/bulk', userMiddleware, async (req, res) => {
     const page = Number(req.query.page) || 1;
     const skip = (page - 1) * limit;
 
+    const filters: any = {
+        userId: req.userId
+    };
+
+    // Filter by Title (if provided)
+    if (req.query.title && req.query.title !== "") {
+        filters.transaction = {
+            some: {
+                event: {
+                    title: {
+                        contains: req.query.title,
+                        mode: 'insensitive'
+                    }
+                }
+            }
+        };
+    }
+
+    // Filter by Type (if provided and not "all")
+    if (req.query.type && req.query.type !== "all") {
+        filters.transaction = {
+            some: {
+                event: {
+                    type: req.query.type
+                }
+            }
+        };
+    }
+
+    // Filter by Date Range (if provided and not "all")
+    if (req.query.dateRange && req.query.dateRange !== "all") {
+        const today = new Date();
+        let startDate;
+
+        switch (req.query.dateRange) {
+            case "30":
+                startDate = new Date(today.setDate(today.getDate() - 30));
+                break;
+            case "90":
+                startDate = new Date(today.setDate(today.getDate() - 90));
+                break;
+            case "365":
+                startDate = new Date(today.setDate(today.getDate() - 365));
+                break;
+            default:
+                startDate = null;
+        }
+
+        if (startDate) {
+            filters.transaction = {
+                some: {
+                    created_at: {
+                        gte: startDate
+                    }
+                }
+            };
+        }
+    }
+
+    if (req.query.status && req.query.status !== "all") {
+        const currentDateTimeIST = moment
+            .utc()
+            .add(5, "hours")
+            .add(30, "minutes")
+            .format("YYYY-MM-DDTHH:mm:ss[Z]");
+
+        // Ensure filters.transaction is always structured properly
+        if (!filters.transaction) {
+            filters.transaction = { some: { event: {} } };
+        } else if (!filters.transaction.some) {
+            filters.transaction.some = { event: {} };
+        }
+
+        if (req.query.status === "active") {
+            filters.transaction.some.event.date = { gte: currentDateTimeIST };
+        } else if (req.query.status === "closed") {
+            filters.transaction.some.event.date = { lt: currentDateTimeIST };
+        }
+    }
+
+
     try {
         const transactions = await client.user.findUnique({
             where: {
@@ -524,11 +611,28 @@ userRouter.get('/transactions/bulk', userMiddleware, async (req, res) => {
                     },
                 },
                 transaction: {
+                    where: filters.transaction?.some || {},
                     select: {
                         id: true,
-                        eventId : true,
-                        created_at:true,
+                        eventId: true,
+                        created_at: true,
                         amount: true,
+                        event: {
+                            select: {
+                                id: true,
+                                title: true,
+                                category: true,
+                                date: true,
+                                time_frame: true,
+                                location: {
+                                    select: {
+                                        venue: true,
+                                        city: true,
+                                        country: true,
+                                    }
+                                },
+                            }
+                        },
                         ticket_details: {
                             select: {
                                 ticket_category: true,
@@ -541,17 +645,12 @@ userRouter.get('/transactions/bulk', userMiddleware, async (req, res) => {
                                     }
                                 },
                                 payment_type: true,
-                                event_title: true,
-                                event_category: true,
-                                event_date: true,
-                                event_venue: true,
-                                event_time: true,
                             }
                         }
                     },
                     skip: skip,
                     take: limit,
-                    orderBy:{
+                    orderBy: {
                         created_at: 'desc'
                     }
                 }
