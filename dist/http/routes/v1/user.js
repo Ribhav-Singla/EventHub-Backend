@@ -650,3 +650,186 @@ exports.userRouter.get('/transactions/bulk', user_1.userMiddleware, (req, res) =
         res.status(500).json({ message: "Internal server error" });
     }
 }));
+exports.userRouter.get('/dashboard/analytics', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('inside analytics');
+    try {
+        const result = yield index_1.default.user.findUnique({
+            where: {
+                id: req.userId,
+            },
+            select: {
+                events: {
+                    select: {
+                        title: true,
+                        price: true,
+                        tickets_sold: true,
+                        total_tickets: true,
+                        date: true,
+                        transaction: {
+                            select: {
+                                amount: true,
+                                created_at: true,
+                                ticket_details: {
+                                    select: {
+                                        ticket_category: true,
+                                        payment_type: true,
+                                        attendee: {
+                                            select: {
+                                                age: true,
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        if (!result) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+        // Metrics
+        let totalRevenue = 0;
+        let totalTicketsSold = 0;
+        result.events.forEach(event => {
+            totalTicketsSold += event.tickets_sold || 0;
+            event.transaction.forEach(txn => {
+                totalRevenue += txn.amount || 0;
+            });
+        });
+        const avgTicketPrice = totalTicketsSold > 0 ? (totalRevenue / totalTicketsSold).toFixed(2) : 0;
+        // Top 3 performing events
+        let topEvents = result.events.map(event => {
+            const totalRevenue = event.transaction.reduce((sum, txn) => sum + txn.amount, 0);
+            const conversionRate = event.total_tickets
+                ? ((event.tickets_sold / event.total_tickets) * 100).toFixed(2) + "%"
+                : "N/A";
+            const status = event.date;
+            return {
+                title: event.title,
+                revenue: totalRevenue,
+                ticketsSold: event.tickets_sold,
+                conversionRate,
+                status,
+            };
+        });
+        // Sort by revenue in descending order and take the top 3
+        topEvents = topEvents.sort((a, b) => b.revenue - a.revenue).slice(0, 3);
+        res.status(200).json({
+            metrics: {
+                totalRevenue,
+                totalTicketsSold,
+                avgTicketPrice,
+            },
+            topEvents: topEvents
+        });
+    }
+    catch (error) {
+        console.log('Error occured while fetching analytics');
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}));
+exports.userRouter.get('/dashboard/overview', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('Inside overview');
+    try {
+        const result = yield index_1.default.user.findUnique({
+            where: {
+                id: req.userId,
+            },
+            select: {
+                events: {
+                    select: {
+                        title: true,
+                        price: true,
+                        tickets_sold: true,
+                        total_tickets: true,
+                        transaction: {
+                            select: {
+                                amount: true,
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        if (!result) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+        // Metrics
+        const totalEvents = result.events.length;
+        const totalRevenue = result.events.reduce((sum, event) => {
+            const eventRevenue = event.transaction.reduce((revenueSum, tx) => revenueSum + (tx.amount || 0), 0);
+            return sum + eventRevenue;
+        }, 0);
+        const totalTicketsSold = result.events.reduce((sum, event) => sum + (event.tickets_sold || 0), 0);
+        const totalTickets = result.events.reduce((sum, event) => sum + (event.total_tickets || 0), 0);
+        const conversionRate = totalTickets > 0 ? (totalTicketsSold / totalTickets) * 100 : 0;
+        const metrics = {
+            totalEvents,
+            totalRevenue,
+            totalTicketsSold,
+            conversionRate: conversionRate.toFixed(2)
+        };
+        // Top 3 upcoming events
+        const currentDateTimeIST = moment_timezone_1.default
+            .utc()
+            .add(5, "hours")
+            .add(30, "minutes")
+            .format("YYYY-MM-DDTHH:mm:ss[Z]");
+        const fetched_events = yield index_1.default.user.findUnique({
+            where: {
+                id: req.userId
+            },
+            select: {
+                events: {
+                    select: {
+                        title: true,
+                        date: true,
+                        location: {
+                            select: {
+                                venue: true,
+                                city: true,
+                                country: true,
+                            }
+                        },
+                        time_frame: true,
+                        tickets_sold: true,
+                    },
+                    where: {
+                        date: {
+                            gte: currentDateTimeIST,
+                        },
+                    },
+                    orderBy: {
+                        date: "asc",
+                    },
+                    take: 3
+                }
+            },
+        });
+        const upcomingEvents = fetched_events ? fetched_events.events.map(event => {
+            var _a, _b, _c;
+            return ({
+                title: event.title,
+                date: event.date,
+                location: `${(_a = event.location[0]) === null || _a === void 0 ? void 0 : _a.venue}, ${(_b = event.location[0]) === null || _b === void 0 ? void 0 : _b.city}, ${(_c = event.location[0]) === null || _c === void 0 ? void 0 : _c.country}`,
+                time: event.time_frame,
+                ticketsSold: event.tickets_sold || 0,
+            });
+        }) : [];
+        res.status(200).json({
+            metrics,
+            upcomingEvents
+        });
+    }
+    catch (error) {
+        console.log('Error occurred while fetching overview');
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+        return;
+    }
+}));
