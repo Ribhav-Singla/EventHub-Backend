@@ -50,7 +50,7 @@ model Event {
   transaction       Transaction[]
   wishlist          Wishlist[]
   created_at        DateTime      @default(now())
-  updated_at        DateTime      @default(now())
+  updated_at        DateTime      @default(now()) @updatedAt
   isDeleted         Boolean       @default(false)
 }
 

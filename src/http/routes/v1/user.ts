@@ -320,7 +320,7 @@ userRouter.put('/:eventId', userMiddleware, async (req, res) => {
                             email: req.body.organizer_details[0].email
                         }
                     }
-                }
+                },
             }
         });
 
@@ -869,5 +869,52 @@ userRouter.get('/dashboard/overview', userMiddleware, async (req, res) => {
     }
 });
 
+userRouter.get('/dashboard/overview/recent-activity', userMiddleware, async (req, res) => {
+    console.log('inside recent activity');
+
+    try {
+
+        const activity = await client.user.findUnique({
+            where:{
+                id: req.userId,
+            },
+            select:{
+                transaction:{
+                    select:{
+                        event:{
+                            select:{
+                                title:true,
+                            }
+                        },
+                        ticket_details:{
+                            select:{
+                                ticket_quantity:true,
+                            }
+                        },
+                        created_at:true
+                    },
+                    take:3,
+                    orderBy:{created_at:'desc'}
+                },
+                events:{
+                    select:{
+                        title:true,
+                        updated_at:true,
+                        created_at:true,
+                    },
+                    take:3,
+                    orderBy:{updated_at:'desc'},
+                }
+            }
+        })
+
+        res.json(activity);
+    } catch (error) {
+        console.log('Error occurred while fetching recent activity');
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+        return
+    }
+})
 
 

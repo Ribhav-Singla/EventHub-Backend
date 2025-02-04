@@ -322,7 +322,7 @@ exports.userRouter.put('/:eventId', user_1.userMiddleware, (req, res) => __await
                             email: req.body.organizer_details[0].email
                         }
                     }
-                }
+                },
             }
         });
         res.status(200).json({ eventId: event.id });
@@ -828,6 +828,51 @@ exports.userRouter.get('/dashboard/overview', user_1.userMiddleware, (req, res) 
     }
     catch (error) {
         console.log('Error occurred while fetching overview');
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+        return;
+    }
+}));
+exports.userRouter.get('/dashboard/overview/recent-activity', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('inside recent activity');
+    try {
+        const activity = yield index_1.default.user.findUnique({
+            where: {
+                id: req.userId,
+            },
+            select: {
+                transaction: {
+                    select: {
+                        event: {
+                            select: {
+                                title: true,
+                            }
+                        },
+                        ticket_details: {
+                            select: {
+                                ticket_quantity: true,
+                            }
+                        },
+                        created_at: true
+                    },
+                    take: 3,
+                    orderBy: { created_at: 'desc' }
+                },
+                events: {
+                    select: {
+                        title: true,
+                        updated_at: true,
+                        created_at: true,
+                    },
+                    take: 3,
+                    orderBy: { updated_at: 'desc' },
+                }
+            }
+        });
+        res.json(activity);
+    }
+    catch (error) {
+        console.log('Error occurred while fetching recent activity');
         console.error(error);
         res.status(500).json({ message: "Internal server error" });
         return;
