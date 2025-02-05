@@ -3,6 +3,7 @@ import { userMiddleware } from "../../middleware/user";
 import client from "../../../db/index";
 import bcrypt from 'bcrypt';
 import moment from "moment-timezone";
+import { LOCATION_TYPE, ORGANIZER_DETAILS_TYPE } from "../../types";
 
 export const userRouter = express.Router();
 
@@ -34,74 +35,6 @@ userRouter.post("/wishlist/:eventId", userMiddleware, async (req, res) => {
         }
     } catch (error) {
         console.error("error occured in wishlist ", error);
-        res.status(500).json({ message: "Internal Server Error" });
-    }
-});
-
-userRouter.get("/events", userMiddleware, async (req, res) => {
-    const status = req.query.status || "all"
-    const category = req.query.category || "all"
-    const title = req.query.title || ""
-    const limit = 6;
-    const page = Number(req.query.page) || 1;
-    const skip = (page - 1) * limit;
-    try {
-
-        const filter: any = {
-            creatorId: req.userId
-        }
-        if (category !== "all") {
-            filter.category = category
-        }
-        if (title) {
-            filter.title = {
-                contains: title,
-                mode: "insensitive"
-            }
-        }
-        if (status !== "all") {
-            const currentDateTimeIST = moment
-                .utc()
-                .add(5, "hours")
-                .add(30, "minutes")
-                .format("YYYY-MM-DDTHH:mm:ss[Z]");
-            if (status === "active") {
-                filter.date = { gte: currentDateTimeIST };
-            } else if (status === "closed") {
-                filter.date = { lt: currentDateTimeIST };
-            }
-        }
-
-        const events = await client.event.findMany({
-            where: filter,
-            select: {
-                id: true,
-                title: true,
-                location: {
-                    select: {
-                        city: true,
-                        country: true,
-                    },
-                },
-                date: true,
-                price: true,
-                total_tickets: true,
-                tickets_sold: true,
-            },
-            take: limit,
-            skip: skip,
-        });
-
-        const total_events = await client.event.count({
-            where: filter
-        });
-
-        res.json({
-            events,
-            total_events,
-        });
-    } catch (error) {
-        console.error("error occured in events ", error);
         res.status(500).json({ message: "Internal Server Error" });
     }
 });
@@ -155,7 +88,7 @@ userRouter.get("/wishlist", userMiddleware, async (req, res) => {
                             },
                         },
                         date: true,
-                        price: true,
+                        general_ticket_price: true,
                     },
                 },
             },
@@ -177,54 +110,127 @@ userRouter.get("/wishlist", userMiddleware, async (req, res) => {
     }
 });
 
-userRouter.get('/profile/data', userMiddleware, async (req, res) => {
-    console.log('inside profile');
+userRouter.post("/event/publish", userMiddleware, async (req, res) => {
+    console.log("inside publish event");
+
+    if (!req.userId) {
+        res.status(401).json({ message: "Unauthorized" });
+        return
+    }
+
     try {
-        const user = await client.user.findUnique({
-            where: {
-                id: req.userId
+        const isoDate = new Date(
+            `${req.body.date}T${req.body.time_frame[0].time}Z`
+        );
+        const event = await client.event.create({
+            data: {
+                title: req.body.title,
+                type: req.body.type,
+                category: req.body.category,
+                description: req.body.description,
+                vip_ticket_price: req.body.vip_ticket_price,
+                vip_tickets_count: req.body.vip_tickets_count,
+                vip_tickets_sold: 0,
+                general_ticket_price: req.body.general_ticket_price,
+                general_tickets_count: req.body.general_tickets_count,
+                general_tickets_sold: 0,
+                date: isoDate,
+                time_frame: req.body.time_frame,
+                images: req.body.images,
+                creatorId: req.userId,
+                location: {
+                    create: req.body.location.map((loc: LOCATION_TYPE) => ({
+                        venue: loc.venue,
+                        city: loc.city,
+                        country: loc.country,
+                    })),
+                },
+                organizer_details: {
+                    create: req.body.organizer_details.map((organizer: ORGANIZER_DETAILS_TYPE) => ({
+                        phone: organizer.phone,
+                        email: organizer.email,
+                    })),
+                },
             },
+        });
+
+        res.status(201).json({ eventId: event.id });
+    } catch (error) {
+        console.log("error in event", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+userRouter.get("/events", userMiddleware, async (req, res) => {
+    const status = req.query.status || "all"
+    const category = req.query.category || "all"
+    const title = req.query.title || ""
+    const limit = 6;
+    const page = Number(req.query.page) || 1;
+    const skip = (page - 1) * limit;
+    try {
+
+        const filter: any = {
+            creatorId: req.userId
+        }
+        if (category !== "all") {
+            filter.category = category
+        }
+        if (title) {
+            filter.title = {
+                contains: title,
+                mode: "insensitive"
+            }
+        }
+        if (status !== "all") {
+            const currentDateTimeIST = moment
+                .utc()
+                .add(5, "hours")
+                .add(30, "minutes")
+                .format("YYYY-MM-DDTHH:mm:ss[Z]");
+            if (status === "active") {
+                filter.date = { gte: currentDateTimeIST };
+            } else if (status === "closed") {
+                filter.date = { lt: currentDateTimeIST };
+            }
+        }
+
+        const events = await client.event.findMany({
+            where: filter,
             select: {
                 id: true,
-                firstname: true,
-                lastname: true,
-                email: true,
-                phone: true,
-                bio: true,
-                linkedIn: true,
-                twitter: true,
-                newsletter_subscription: true,
-            }
-        })
-        res.json(user)
-    } catch (error) {
-        console.log('error in get profile', error);
-        res.status(500).json({ message: 'Internal Server Error' })
-    }
-})
-
-userRouter.put('/profile/data', userMiddleware, async (req, res) => {
-    try {
-        const user = await client.user.update({
-            where: {
-                id: req.userId
+                title: true,
+                location: {
+                    select: {
+                        city: true,
+                        country: true,
+                    },
+                },
+                date: true,
+                general_ticket_price: true,
+                general_tickets_sold: true,
+                general_tickets_count: true,
+                vip_ticket_price: true,
+                vip_tickets_sold: true,
+                vip_tickets_count: true,
             },
-            data: {
-                phone: req.body.phone,
-                bio: req.body.bio,
-                linkedIn: req.body.linkedIn,
-                twitter: req.body.twitter,
-                newsletter_subscription: req.body.newsletter_subscription
-            }
-        })
+            take: limit,
+            skip: skip,
+        });
+
+        const total_events = await client.event.count({
+            where: filter
+        });
+
         res.json({
-            userId: user.id
-        })
+            events,
+            total_events,
+        });
     } catch (error) {
-        console.log('error in update profile', error);
-        res.status(500).json({ message: 'Internal Server Error' })
+        console.error("error occured in events ", error);
+        res.status(500).json({ message: "Internal Server Error" });
     }
-})
+});
 
 userRouter.get('/:eventId', async (req, res) => {
     const eventId = req.params.eventId
@@ -240,9 +246,12 @@ userRouter.get('/:eventId', async (req, res) => {
                 type: true,
                 category: true,
                 description: true,
-                price: true,
-                total_tickets: true,
-                tickets_sold: true,
+                vip_ticket_price: true,
+                vip_tickets_sold: true,
+                vip_tickets_count: true,
+                general_ticket_price: true,
+                general_tickets_sold: true,
+                general_tickets_count: true,
                 date: true,
                 time_frame: true,
                 images: true,
@@ -292,8 +301,10 @@ userRouter.put('/:eventId', userMiddleware, async (req, res) => {
                 type: req.body.type,
                 category: req.body.category,
                 description: req.body.description,
-                price: req.body.price,
-                total_tickets: req.body.total_tickets,
+                vip_ticket_price: req.body.vip_ticket_price,
+                vip_tickets_count: req.body.vip_tickets_count,
+                general_ticket_price: req.body.general_ticket_price,
+                general_tickets_count: req.body.general_tickets_count,
                 date: isoDate,
                 time_frame: req.body.time_frame,
                 images: req.body.images,
@@ -347,7 +358,56 @@ userRouter.delete('/:eventId', userMiddleware, async (req, res) => {
     }
 })
 
-userRouter.post('/update/password', userMiddleware, async (req, res) => {
+userRouter.get('/profile/data', userMiddleware, async (req, res) => {
+    console.log('inside profile');
+    try {
+        const user = await client.user.findUnique({
+            where: {
+                id: req.userId
+            },
+            select: {
+                id: true,
+                firstname: true,
+                lastname: true,
+                email: true,
+                phone: true,
+                bio: true,
+                linkedIn: true,
+                twitter: true,
+                newsletter_subscription: true,
+            }
+        })
+        res.json(user)
+    } catch (error) {
+        console.log('error in get profile', error);
+        res.status(500).json({ message: 'Internal Server Error' })
+    }
+})
+
+userRouter.put('/profile/data', userMiddleware, async (req, res) => {
+    try {
+        const user = await client.user.update({
+            where: {
+                id: req.userId
+            },
+            data: {
+                phone: req.body.phone,
+                bio: req.body.bio,
+                linkedIn: req.body.linkedIn,
+                twitter: req.body.twitter,
+                newsletter_subscription: req.body.newsletter_subscription
+            }
+        })
+        res.json({
+            userId: user.id
+        })
+    } catch (error) {
+        console.log('error in update profile', error);
+        res.status(500).json({ message: 'Internal Server Error' })
+    }
+})
+
+userRouter.post('/profile/update/password', userMiddleware, async (req, res) => {
     try {
         const user = await client.user.findUnique({
             where: {
@@ -389,74 +449,90 @@ userRouter.post('/update/password', userMiddleware, async (req, res) => {
 })
 
 userRouter.post('/ticket/transaction/:eventId', userMiddleware, async (req, res) => {
-    console.log('inside transaction');
-
-    if (!req.userId || typeof req.userId !== 'string') {
-        res.status(401).json({ message: 'Unauthorized' });
-        return;
-    }
+    console.log('Inside transaction');
+    const eventId = req.params.eventId;
 
     try {
-        const ticket_transaction = await client.$transaction(async (client) => {
+        const transactionData = await client.$transaction(async (client) => {
             const event = await client.event.findUnique({
-                where: {
-                    id: req.params.eventId,
-                },
+                where: { id: eventId },
             });
 
             if (!event) {
-                res.status(404).json({ message: 'Event not found' });
-                return;
+                throw new Error('Event not found');
             }
 
-            if (event.total_tickets === null || event.total_tickets - event.tickets_sold >= req.body.ticket_quantity) {
-                await client.event.update({
-                    where: {
-                        id: req.params.eventId,
-                    },
-                    data: {
-                        tickets_sold: event.tickets_sold + req.body.ticket_quantity,
-                    },
-                });
+            // Determine available tickets based on category
+            let availableTickets, ticketsSoldField;
 
-                if (!req.userId) {
-                    throw new Error('User ID is undefined');
+            if (req.body.ticket_category === 'VIP Access') {
+                if (event.vip_tickets_count === -1) {
+                    availableTickets = Infinity; // Unlimited tickets
+                } else {
+                    availableTickets = event.vip_tickets_count - event.vip_tickets_sold;
                 }
-
-                const transaction = await client.transaction.create({
-                    data: {
-                        userId: req.userId,
-                        eventId: req.params.eventId,
-                        amount: req.body.ticket_amount,
-                        ticket_details: {
-                            create: [
-                                {
-                                    ticket_quantity: req.body.ticket_quantity,
-                                    ticket_category: req.body.ticket_category,
-                                    ticket_price: req.body.ticket_price,
-                                    payment_type: req.body.payment_type,
-                                    attendee: {
-                                        create: req.body.attendees.map((attendee: any) => ({
-                                            name: attendee.name,
-                                            age: attendee.age,
-                                        })),
-                                    },
-                                },
-                            ],
-                        },
-                    },
-                });
-
-                res.status(201).json({
-                    transactionId: transaction.id,
-                });
+                ticketsSoldField = 'vip_tickets_sold';
+            } else if (req.body.ticket_category === 'General Admission') {
+                if (event.general_tickets_count === -1) {
+                    availableTickets = Infinity; // Unlimited tickets
+                } else {
+                    availableTickets = event.general_tickets_count - event.general_tickets_sold;
+                }
+                ticketsSoldField = 'general_tickets_sold';
             } else {
-                res.status(400).json({ message: 'Not enough tickets available' });
+                throw new Error('Invalid ticket category');
             }
+
+            // Skip availability check if unlimited tickets
+            if (availableTickets !== Infinity && availableTickets < req.body.ticket_quantity) {
+                throw new Error('Not enough tickets available');
+            }
+
+
+            // Update ticket count
+            await client.event.update({
+                where: { id: eventId },
+                data: {
+                    [ticketsSoldField]: {
+                        increment: req.body.ticket_quantity,
+                    },
+                },
+            });
+
+            // Create transaction
+            const transaction = await client.transaction.create({
+                data: {
+                    userId: req.userId!,
+                    eventId: eventId,
+                    amount: req.body.ticket_amount,
+                    ticket_details: {
+                        create: [
+                            {
+                                ticket_quantity: req.body.ticket_quantity,
+                                ticket_category: req.body.ticket_category,
+                                ticket_price: req.body.ticket_price,
+                                payment_type: req.body.payment_type,
+                                attendees: {
+                                    create: req.body.attendees.map((attendee: any) => ({
+                                        name: attendee.name,
+                                        age: attendee.age,
+                                    })),
+                                },
+                            },
+                        ],
+                    },
+                },
+            });
+
+            return transaction;
         });
-    } catch (error) {
-        console.error('Transaction error:', error);
-        res.status(500).json({ message: 'Internal server error' });
+
+        res.status(201).json({
+            transactionId: transactionData.id,
+        });
+    } catch (error: any) {
+        console.error('Transaction error:', error.message);
+        res.status(500).json({ message: error.message || 'Internal server error' });
     }
 });
 
@@ -485,7 +561,7 @@ userRouter.get('/ticket/:transactionId', userMiddleware, async (req, res) => {
                 },
                 ticket_details: {
                     select: {
-                        attendee: {
+                        attendees: {
                             select: {
                                 name: true,
                                 age: true
@@ -524,7 +600,7 @@ userRouter.get('/transactions/bulk', userMiddleware, async (req, res) => {
 
     // Filter by Title (if provided)
     if (req.query.title && req.query.title !== "") {
-        filters.transaction = {
+        filters.transactions = {
             some: {
                 event: {
                     title: {
@@ -538,7 +614,7 @@ userRouter.get('/transactions/bulk', userMiddleware, async (req, res) => {
 
     // Filter by Type (if provided and not "all")
     if (req.query.type && req.query.type !== "all") {
-        filters.transaction = {
+        filters.transactions = {
             some: {
                 event: {
                     type: req.query.type
@@ -567,7 +643,7 @@ userRouter.get('/transactions/bulk', userMiddleware, async (req, res) => {
         }
 
         if (startDate) {
-            filters.transaction = {
+            filters.transactions = {
                 some: {
                     created_at: {
                         gte: startDate
@@ -585,16 +661,16 @@ userRouter.get('/transactions/bulk', userMiddleware, async (req, res) => {
             .format("YYYY-MM-DDTHH:mm:ss[Z]");
 
         // Ensure filters.transaction is always structured properly
-        if (!filters.transaction) {
-            filters.transaction = { some: { event: {} } };
-        } else if (!filters.transaction.some) {
-            filters.transaction.some = { event: {} };
+        if (!filters.transactions) {
+            filters.transactions = { some: { event: {} } };
+        } else if (!filters.transactions.some) {
+            filters.transactions.some = { event: {} };
         }
 
         if (req.query.status === "active") {
-            filters.transaction.some.event.date = { gte: currentDateTimeIST };
+            filters.transactions.some.event.date = { gte: currentDateTimeIST };
         } else if (req.query.status === "closed") {
-            filters.transaction.some.event.date = { lt: currentDateTimeIST };
+            filters.transactions.some.event.date = { lt: currentDateTimeIST };
         }
     }
 
@@ -607,11 +683,11 @@ userRouter.get('/transactions/bulk', userMiddleware, async (req, res) => {
             select: {
                 _count: {
                     select: {
-                        transaction: true,
+                        transactions: true,
                     },
                 },
-                transaction: {
-                    where: filters.transaction?.some || {},
+                transactions: {
+                    where: filters.transactions?.some || {},
                     select: {
                         id: true,
                         eventId: true,
@@ -638,7 +714,7 @@ userRouter.get('/transactions/bulk', userMiddleware, async (req, res) => {
                                 ticket_category: true,
                                 ticket_quantity: true,
                                 ticket_price: true,
-                                attendee: {
+                                attendees: {
                                     select: {
                                         name: true,
                                         age: true
@@ -657,10 +733,10 @@ userRouter.get('/transactions/bulk', userMiddleware, async (req, res) => {
             }
         })
 
-        const total_transactions = transactions?._count.transaction || 0;
+        const total_transactions = transactions?._count.transactions || 0;
         res.json({
             total_transactions,
-            transactions: transactions?.transaction
+            transactions: transactions?.transactions
         })
     } catch (error) {
         console.log('Error occured while fetching transactions');
@@ -673,7 +749,6 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
     console.log('inside analytics');
 
     try {
-
         const result = await client.user.findUnique({
             where: {
                 id: req.userId,
@@ -682,11 +757,14 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
                 events: {
                     select: {
                         title: true,
-                        price: true,
-                        tickets_sold: true,
-                        total_tickets: true,
+                        vip_ticket_price: true,
+                        vip_tickets_sold: true,
+                        vip_tickets_count: true,
+                        general_ticket_price: true,
+                        general_tickets_sold: true,
+                        general_tickets_count: true,
                         date: true,
-                        transaction: {
+                        transactions: {
                             select: {
                                 amount: true,
                                 created_at: true,
@@ -694,7 +772,7 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
                                     select: {
                                         ticket_category: true,
                                         payment_type: true,
-                                        attendee: {
+                                        attendees: {
                                             select: {
                                                 age: true,
                                             }
@@ -706,7 +784,7 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
                     }
                 }
             }
-        })
+        });
 
         if (!result) {
             res.status(404).json({ message: "User not found" });
@@ -718,28 +796,31 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
         let totalTicketsSold = 0;
 
         result.events.forEach(event => {
-            totalTicketsSold += event.tickets_sold || 0;
-            event.transaction.forEach(txn => {
+            const eventTotalTicketsSold = (event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0);
+            totalTicketsSold += eventTotalTicketsSold;
+
+            event.transactions.forEach(txn => {
                 totalRevenue += txn.amount || 0;
             });
         });
 
-        const avgTicketPrice = totalTicketsSold > 0 ? (totalRevenue / totalTicketsSold).toFixed(2) : 0;
+        const avgTicketPrice = totalTicketsSold > 0 ? (totalRevenue / totalTicketsSold).toFixed(2) : "0.00";
 
         // Top 3 performing events
         let topEvents = result.events.map(event => {
-            const totalRevenue = event.transaction.reduce((sum, txn) => sum + txn.amount, 0);
-            const conversionRate = event.total_tickets
-                ? ((event.tickets_sold / event.total_tickets) * 100).toFixed(2) + "%"
+            const eventTotalTicketsSold = (event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0);
+            const totalRevenue = event.transactions.reduce((sum, txn) => sum + txn.amount, 0);
+            const totalAvailableTickets = (event.vip_tickets_count || 0) + (event.general_tickets_count || 0);
+            const conversionRate = totalAvailableTickets > 0 
+                ? ((eventTotalTicketsSold / totalAvailableTickets) * 100).toFixed(2) + "%" 
                 : "N/A";
-            const status = event.date;
 
             return {
                 title: event.title,
                 revenue: totalRevenue,
-                ticketsSold: event.tickets_sold,
+                ticketsSold: eventTotalTicketsSold,
                 conversionRate,
-                status,
+                status: event.date // Convert Date object to readable format
             };
         });
 
@@ -756,11 +837,10 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
         });
 
     } catch (error) {
-        console.log('Error occured while fetching analytics');
-        console.error(error);
+        console.error('Error occurred while fetching analytics:', error);
         res.status(500).json({ message: "Internal server error" });
     }
-})
+});
 
 userRouter.get('/dashboard/overview', userMiddleware, async (req, res) => {
     console.log('Inside overview');
@@ -774,10 +854,13 @@ userRouter.get('/dashboard/overview', userMiddleware, async (req, res) => {
                 events: {
                     select: {
                         title: true,
-                        price: true,
-                        tickets_sold: true,
-                        total_tickets: true,
-                        transaction: {
+                        vip_ticket_price: true,
+                        vip_tickets_sold: true,
+                        vip_tickets_count: true,
+                        general_ticket_price: true,
+                        general_tickets_sold: true,
+                        general_tickets_count: true,
+                        transactions: {
                             select: {
                                 amount: true,
                             }
@@ -789,24 +872,31 @@ userRouter.get('/dashboard/overview', userMiddleware, async (req, res) => {
 
         if (!result) {
             res.status(404).json({ message: "User not found" });
-            return
+            return;
         }
 
         // Metrics
         const totalEvents = result.events.length;
         const totalRevenue = result.events.reduce((sum, event) => {
-            const eventRevenue = event.transaction.reduce((revenueSum, tx) => revenueSum + (tx.amount || 0), 0);
+            const eventRevenue = event.transactions.reduce((revenueSum, tx) => revenueSum + (tx.amount || 0), 0);
             return sum + eventRevenue;
         }, 0);
-        const totalTicketsSold = result.events.reduce((sum, event) => sum + (event.tickets_sold || 0), 0);
-        const totalTickets = result.events.reduce((sum, event) => sum + (event.total_tickets || 0), 0);
-        const conversionRate = totalTickets > 0 ? (totalTicketsSold / totalTickets) * 100 : 0;
+
+        const totalTicketsSold = result.events.reduce((sum, event) => 
+            sum + ((event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0)), 
+        0);
+
+        const totalTickets = result.events.reduce((sum, event) => 
+            sum + ((event.vip_tickets_count || 0) + (event.general_tickets_count || 0)), 
+        0);
+
+        const conversionRate = totalTickets > 0 ? ((totalTicketsSold / totalTickets) * 100).toFixed(2) : "0.00";
 
         const metrics = {
             totalEvents,
             totalRevenue,
             totalTicketsSold,
-            conversionRate: conversionRate.toFixed(2)
+            conversionRate
         };
 
         // Top 3 upcoming events
@@ -822,6 +912,15 @@ userRouter.get('/dashboard/overview', userMiddleware, async (req, res) => {
             },
             select: {
                 events: {
+                    where: {
+                        date: {
+                            gte: currentDateTimeIST,
+                        },
+                    },
+                    orderBy: {
+                        date: "asc",
+                    },
+                    take: 3,
                     select: {
                         title: true,
                         date: true,
@@ -833,27 +932,19 @@ userRouter.get('/dashboard/overview', userMiddleware, async (req, res) => {
                             }
                         },
                         time_frame: true,
-                        tickets_sold: true,
-                    },
-                    where: {
-                        date: {
-                            gte: currentDateTimeIST,
-                        },
-                    },
-                    orderBy: {
-                        date: "asc",
-                    },
-                    take: 3
+                        general_tickets_sold: true,
+                        vip_tickets_sold: true
+                    }
                 }
-            },
+            }
         });
 
         const upcomingEvents = fetched_events ? fetched_events.events.map(event => ({
             title: event.title,
-            date: event.date,
+            date: event.date, // Keeping this as is
             location: `${event.location[0]?.venue}, ${event.location[0]?.city}, ${event.location[0]?.country}`,
             time: event.time_frame,
-            ticketsSold: event.tickets_sold || 0,
+            ticketsSold: (event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0),
         })) : [];
 
         res.status(200).json({
@@ -862,10 +953,8 @@ userRouter.get('/dashboard/overview', userMiddleware, async (req, res) => {
         });
 
     } catch (error) {
-        console.log('Error occurred while fetching overview');
-        console.error(error);
+        console.error('Error occurred while fetching overview:', error);
         res.status(500).json({ message: "Internal server error" });
-        return
     }
 });
 
@@ -875,35 +964,35 @@ userRouter.get('/dashboard/overview/recent-activity', userMiddleware, async (req
     try {
 
         const activity = await client.user.findUnique({
-            where:{
+            where: {
                 id: req.userId,
             },
-            select:{
-                transaction:{
-                    select:{
-                        event:{
-                            select:{
-                                title:true,
+            select: {
+                transactions: {
+                    select: {
+                        event: {
+                            select: {
+                                title: true,
                             }
                         },
-                        ticket_details:{
-                            select:{
-                                ticket_quantity:true,
+                        ticket_details: {
+                            select: {
+                                ticket_quantity: true,
                             }
                         },
-                        created_at:true
+                        created_at: true
                     },
-                    take:3,
-                    orderBy:{created_at:'desc'}
+                    take: 5,
+                    orderBy: { created_at: 'desc' }
                 },
-                events:{
-                    select:{
-                        title:true,
-                        updated_at:true,
-                        created_at:true,
+                events: {
+                    select: {
+                        title: true,
+                        updated_at: true,
+                        created_at: true,
                     },
-                    take:3,
-                    orderBy:{updated_at:'desc'},
+                    take: 5,
+                    orderBy: { updated_at: 'desc' },
                 }
             }
         })

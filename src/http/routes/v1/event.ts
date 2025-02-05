@@ -1,58 +1,8 @@
 import express from "express";
-import { userMiddleware } from "../../middleware/user";
 import client from "../../../db/index";
 import moment from "moment-timezone";
 
 export const eventRouter = express.Router();
-
-eventRouter.post("/", userMiddleware, async (req, res) => {
-    console.log("inside event");
-    try {
-        if (!req.userId) {
-            res.status(401).json({ message: "Unauthorized" });
-            return;
-        }
-        const isoDate = new Date(
-            `${req.body.date}T${req.body.time_frame[0].time}Z`
-        );
-        const event = await client.event.create({
-            data: {
-                title: req.body.title,
-                type: req.body.type,
-                category: req.body.category,
-                description: req.body.description,
-                price: req.body.price,
-                total_tickets: req.body.total_tickets !== null ? req.body.total_tickets : null,
-                tickets_sold: 0,
-                date: isoDate,
-                time_frame: req.body.time_frame,
-                images: req.body.images,
-                creatorId: req.userId,
-                location: {
-                    create: [
-                        {
-                            venue: req.body.location[0].venue,
-                            city: req.body.location[0].city,
-                            country: req.body.location[0].country,
-                        },
-                    ],
-                },
-                organizer_details: {
-                    create: [
-                        {
-                            phone: req.body.organizer_details[0].phone,
-                            email: req.body.organizer_details[0].email,
-                        },
-                    ],
-                },
-            },
-        });
-        res.status(201).json({ eventId: event.id });
-    } catch (error) {
-        console.log("error in event", error);
-        res.status(500).json({ message: "Internal Server Error" });
-    }
-});
 
 eventRouter.get("/", async (req, res) => {
     console.log(req.query);
@@ -97,18 +47,18 @@ eventRouter.get("/", async (req, res) => {
 
         // Price Filter (Ensure valid numbers)
         if (req.query.min_price || req.query.max_price) {
-            filters.price = {};
+            filters.general_ticket_price = {};
             if (
                 typeof req.query.min_price === "string" &&
                 !isNaN(Number(req.query.min_price))
             ) {
-                filters.price.gte = Number(req.query.min_price);
+                filters.general_ticket_price.gte = Number(req.query.min_price);
             }
             if (
                 typeof req.query.max_price === "string" &&
                 !isNaN(Number(req.query.max_price))
             ) {
-                filters.price.lte = Number(req.query.max_price);
+                filters.general_ticket_price.lte = Number(req.query.max_price);
             }
         }
 
@@ -143,7 +93,7 @@ eventRouter.get("/", async (req, res) => {
                         country: true, // Ensure country is selected
                     },
                 },
-                price: true,
+                general_ticket_price: true,
             },
             take: limit,
             skip: skip,
@@ -191,7 +141,7 @@ eventRouter.get("/upcoming", async (req, res) => {
                         city: true,
                     },
                 },
-                price: true,
+                general_ticket_price: true,
                 time_frame: true,
             },
             where: {
@@ -227,9 +177,12 @@ eventRouter.get("/:eventId", async (req, res) => {
                 type: true,
                 category: true,
                 description: true,
-                price: true,
-                total_tickets: true,
-                tickets_sold: true,
+                vip_ticket_price: true,
+                vip_tickets_count: true,
+                vip_tickets_sold: true,
+                general_ticket_price: true,
+                general_tickets_count: true,
+                general_tickets_sold: true,
                 date: true,
                 time_frame: true,
                 images: true,

@@ -52,6 +52,116 @@ exports.userRouter.post("/wishlist/:eventId", user_1.userMiddleware, (req, res) 
         res.status(500).json({ message: "Internal Server Error" });
     }
 }));
+exports.userRouter.get("/wishlist", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const category = req.query.category || "all";
+    const status = req.query.status || "all";
+    const limit = 6;
+    const page = Number(req.query.page) || 1;
+    const skip = (page - 1) * limit;
+    try {
+        let filter = {
+            userId: req.userId,
+        };
+        if (category !== "all") {
+            filter.event = { category };
+        }
+        if (status !== "all") {
+            const currentDateTimeIST = moment_timezone_1.default
+                .utc()
+                .add(5, "hours")
+                .add(30, "minutes")
+                .format("YYYY-MM-DDTHH:mm:ss[Z]");
+            if (!filter.event) {
+                filter.event = {};
+            }
+            if (status === "active") {
+                filter.event.date = { gte: currentDateTimeIST };
+            }
+            else if (status === "closed") {
+                filter.event.date = { lt: currentDateTimeIST };
+            }
+        }
+        const wishlist = yield index_1.default.wishlist.findMany({
+            where: filter,
+            select: {
+                id: true,
+                event: {
+                    select: {
+                        id: true,
+                        title: true,
+                        location: {
+                            select: {
+                                city: true,
+                                country: true,
+                            },
+                        },
+                        date: true,
+                        general_ticket_price: true,
+                    },
+                },
+            },
+            take: limit,
+            skip: skip,
+        });
+        const wishlistCount = yield index_1.default.wishlist.count({
+            where: filter,
+        });
+        res.json({
+            wishlist,
+            wishlistCount,
+        });
+    }
+    catch (error) {
+        console.error("Error occurred in wishlist:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+}));
+exports.userRouter.post("/event/publish", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("inside publish event");
+    if (!req.userId) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+    }
+    try {
+        const isoDate = new Date(`${req.body.date}T${req.body.time_frame[0].time}Z`);
+        const event = yield index_1.default.event.create({
+            data: {
+                title: req.body.title,
+                type: req.body.type,
+                category: req.body.category,
+                description: req.body.description,
+                vip_ticket_price: req.body.vip_ticket_price,
+                vip_tickets_count: req.body.vip_tickets_count,
+                vip_tickets_sold: 0,
+                general_ticket_price: req.body.general_ticket_price,
+                general_tickets_count: req.body.general_tickets_count,
+                general_tickets_sold: 0,
+                date: isoDate,
+                time_frame: req.body.time_frame,
+                images: req.body.images,
+                creatorId: req.userId,
+                location: {
+                    create: req.body.location.map((loc) => ({
+                        venue: loc.venue,
+                        city: loc.city,
+                        country: loc.country,
+                    })),
+                },
+                organizer_details: {
+                    create: req.body.organizer_details.map((organizer) => ({
+                        phone: organizer.phone,
+                        email: organizer.email,
+                    })),
+                },
+            },
+        });
+        res.status(201).json({ eventId: event.id });
+    }
+    catch (error) {
+        console.log("error in event", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+}));
 exports.userRouter.get("/events", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const status = req.query.status || "all";
     const category = req.query.category || "all";
@@ -97,9 +207,12 @@ exports.userRouter.get("/events", user_1.userMiddleware, (req, res) => __awaiter
                     },
                 },
                 date: true,
-                price: true,
-                total_tickets: true,
-                tickets_sold: true,
+                general_ticket_price: true,
+                general_tickets_sold: true,
+                general_tickets_count: true,
+                vip_ticket_price: true,
+                vip_tickets_sold: true,
+                vip_tickets_count: true,
             },
             take: limit,
             skip: skip,
@@ -117,119 +230,6 @@ exports.userRouter.get("/events", user_1.userMiddleware, (req, res) => __awaiter
         res.status(500).json({ message: "Internal Server Error" });
     }
 }));
-exports.userRouter.get("/wishlist", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const category = req.query.category || "all";
-    const status = req.query.status || "all";
-    const limit = 6;
-    const page = Number(req.query.page) || 1;
-    const skip = (page - 1) * limit;
-    try {
-        let filter = {
-            userId: req.userId,
-        };
-        if (category !== "all") {
-            filter.event = { category };
-        }
-        if (status !== "all") {
-            const currentDateTimeIST = moment_timezone_1.default
-                .utc()
-                .add(5, "hours")
-                .add(30, "minutes")
-                .format("YYYY-MM-DDTHH:mm:ss[Z]");
-            if (!filter.event) {
-                filter.event = {};
-            }
-            if (status === "active") {
-                filter.event.date = { gte: currentDateTimeIST };
-            }
-            else if (status === "closed") {
-                filter.event.date = { lt: currentDateTimeIST };
-            }
-        }
-        const wishlist = yield index_1.default.wishlist.findMany({
-            where: filter,
-            select: {
-                id: true,
-                event: {
-                    select: {
-                        id: true,
-                        title: true,
-                        location: {
-                            select: {
-                                city: true,
-                                country: true,
-                            },
-                        },
-                        date: true,
-                        price: true,
-                    },
-                },
-            },
-            take: limit,
-            skip: skip,
-        });
-        const wishlistCount = yield index_1.default.wishlist.count({
-            where: filter,
-        });
-        res.json({
-            wishlist,
-            wishlistCount,
-        });
-    }
-    catch (error) {
-        console.error("Error occurred in wishlist:", error);
-        res.status(500).json({ message: "Internal Server Error" });
-    }
-}));
-exports.userRouter.get('/profile/data', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('inside profile');
-    try {
-        const user = yield index_1.default.user.findUnique({
-            where: {
-                id: req.userId
-            },
-            select: {
-                id: true,
-                firstname: true,
-                lastname: true,
-                email: true,
-                phone: true,
-                bio: true,
-                linkedIn: true,
-                twitter: true,
-                newsletter_subscription: true,
-            }
-        });
-        res.json(user);
-    }
-    catch (error) {
-        console.log('error in get profile', error);
-        res.status(500).json({ message: 'Internal Server Error' });
-    }
-}));
-exports.userRouter.put('/profile/data', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const user = yield index_1.default.user.update({
-            where: {
-                id: req.userId
-            },
-            data: {
-                phone: req.body.phone,
-                bio: req.body.bio,
-                linkedIn: req.body.linkedIn,
-                twitter: req.body.twitter,
-                newsletter_subscription: req.body.newsletter_subscription
-            }
-        });
-        res.json({
-            userId: user.id
-        });
-    }
-    catch (error) {
-        console.log('error in update profile', error);
-        res.status(500).json({ message: 'Internal Server Error' });
-    }
-}));
 exports.userRouter.get('/:eventId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const eventId = req.params.eventId;
     try {
@@ -244,9 +244,12 @@ exports.userRouter.get('/:eventId', (req, res) => __awaiter(void 0, void 0, void
                 type: true,
                 category: true,
                 description: true,
-                price: true,
-                total_tickets: true,
-                tickets_sold: true,
+                vip_ticket_price: true,
+                vip_tickets_sold: true,
+                vip_tickets_count: true,
+                general_ticket_price: true,
+                general_tickets_sold: true,
+                general_tickets_count: true,
                 date: true,
                 time_frame: true,
                 images: true,
@@ -294,8 +297,10 @@ exports.userRouter.put('/:eventId', user_1.userMiddleware, (req, res) => __await
                 type: req.body.type,
                 category: req.body.category,
                 description: req.body.description,
-                price: req.body.price,
-                total_tickets: req.body.total_tickets,
+                vip_ticket_price: req.body.vip_ticket_price,
+                vip_tickets_count: req.body.vip_tickets_count,
+                general_ticket_price: req.body.general_ticket_price,
+                general_tickets_count: req.body.general_tickets_count,
                 date: isoDate,
                 time_frame: req.body.time_frame,
                 images: req.body.images,
@@ -348,7 +353,56 @@ exports.userRouter.delete('/:eventId', user_1.userMiddleware, (req, res) => __aw
         res.status(500).json({ message: 'Internal Server Error' });
     }
 }));
-exports.userRouter.post('/update/password', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.userRouter.get('/profile/data', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('inside profile');
+    try {
+        const user = yield index_1.default.user.findUnique({
+            where: {
+                id: req.userId
+            },
+            select: {
+                id: true,
+                firstname: true,
+                lastname: true,
+                email: true,
+                phone: true,
+                bio: true,
+                linkedIn: true,
+                twitter: true,
+                newsletter_subscription: true,
+            }
+        });
+        res.json(user);
+    }
+    catch (error) {
+        console.log('error in get profile', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}));
+exports.userRouter.put('/profile/data', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const user = yield index_1.default.user.update({
+            where: {
+                id: req.userId
+            },
+            data: {
+                phone: req.body.phone,
+                bio: req.body.bio,
+                linkedIn: req.body.linkedIn,
+                twitter: req.body.twitter,
+                newsletter_subscription: req.body.newsletter_subscription
+            }
+        });
+        res.json({
+            userId: user.id
+        });
+    }
+    catch (error) {
+        console.log('error in update profile', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}));
+exports.userRouter.post('/profile/update/password', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const user = yield index_1.default.user.findUnique({
             where: {
@@ -386,69 +440,85 @@ exports.userRouter.post('/update/password', user_1.userMiddleware, (req, res) =>
     }
 }));
 exports.userRouter.post('/ticket/transaction/:eventId', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('inside transaction');
-    if (!req.userId || typeof req.userId !== 'string') {
-        res.status(401).json({ message: 'Unauthorized' });
-        return;
-    }
+    console.log('Inside transaction');
+    const eventId = req.params.eventId;
     try {
-        const ticket_transaction = yield index_1.default.$transaction((client) => __awaiter(void 0, void 0, void 0, function* () {
+        const transactionData = yield index_1.default.$transaction((client) => __awaiter(void 0, void 0, void 0, function* () {
             const event = yield client.event.findUnique({
-                where: {
-                    id: req.params.eventId,
-                },
+                where: { id: eventId },
             });
             if (!event) {
-                res.status(404).json({ message: 'Event not found' });
-                return;
+                throw new Error('Event not found');
             }
-            if (event.total_tickets === null || event.total_tickets - event.tickets_sold >= req.body.ticket_quantity) {
-                yield client.event.update({
-                    where: {
-                        id: req.params.eventId,
-                    },
-                    data: {
-                        tickets_sold: event.tickets_sold + req.body.ticket_quantity,
-                    },
-                });
-                if (!req.userId) {
-                    throw new Error('User ID is undefined');
+            // Determine available tickets based on category
+            let availableTickets, ticketsSoldField;
+            if (req.body.ticket_category === 'VIP Access') {
+                if (event.vip_tickets_count === -1) {
+                    availableTickets = Infinity; // Unlimited tickets
                 }
-                const transaction = yield client.transaction.create({
-                    data: {
-                        userId: req.userId,
-                        eventId: req.params.eventId,
-                        amount: req.body.ticket_amount,
-                        ticket_details: {
-                            create: [
-                                {
-                                    ticket_quantity: req.body.ticket_quantity,
-                                    ticket_category: req.body.ticket_category,
-                                    ticket_price: req.body.ticket_price,
-                                    payment_type: req.body.payment_type,
-                                    attendee: {
-                                        create: req.body.attendees.map((attendee) => ({
-                                            name: attendee.name,
-                                            age: attendee.age,
-                                        })),
-                                    },
-                                },
-                            ],
-                        },
-                    },
-                });
-                res.status(201).json({
-                    transactionId: transaction.id,
-                });
+                else {
+                    availableTickets = event.vip_tickets_count - event.vip_tickets_sold;
+                }
+                ticketsSoldField = 'vip_tickets_sold';
+            }
+            else if (req.body.ticket_category === 'General Admission') {
+                if (event.general_tickets_count === -1) {
+                    availableTickets = Infinity; // Unlimited tickets
+                }
+                else {
+                    availableTickets = event.general_tickets_count - event.general_tickets_sold;
+                }
+                ticketsSoldField = 'general_tickets_sold';
             }
             else {
-                res.status(400).json({ message: 'Not enough tickets available' });
+                throw new Error('Invalid ticket category');
             }
+            // Skip availability check if unlimited tickets
+            if (availableTickets !== Infinity && availableTickets < req.body.ticket_quantity) {
+                throw new Error('Not enough tickets available');
+            }
+            // Update ticket count
+            yield client.event.update({
+                where: { id: eventId },
+                data: {
+                    [ticketsSoldField]: {
+                        increment: req.body.ticket_quantity,
+                    },
+                },
+            });
+            // Create transaction
+            const transaction = yield client.transaction.create({
+                data: {
+                    userId: req.userId,
+                    eventId: eventId,
+                    amount: req.body.ticket_amount,
+                    ticket_details: {
+                        create: [
+                            {
+                                ticket_quantity: req.body.ticket_quantity,
+                                ticket_category: req.body.ticket_category,
+                                ticket_price: req.body.ticket_price,
+                                payment_type: req.body.payment_type,
+                                attendees: {
+                                    create: req.body.attendees.map((attendee) => ({
+                                        name: attendee.name,
+                                        age: attendee.age,
+                                    })),
+                                },
+                            },
+                        ],
+                    },
+                },
+            });
+            return transaction;
         }));
+        res.status(201).json({
+            transactionId: transactionData.id,
+        });
     }
     catch (error) {
-        console.error('Transaction error:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        console.error('Transaction error:', error.message);
+        res.status(500).json({ message: error.message || 'Internal server error' });
     }
 }));
 exports.userRouter.get('/ticket/:transactionId', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -476,7 +546,7 @@ exports.userRouter.get('/ticket/:transactionId', user_1.userMiddleware, (req, re
                 },
                 ticket_details: {
                     select: {
-                        attendee: {
+                        attendees: {
                             select: {
                                 name: true,
                                 age: true
@@ -513,7 +583,7 @@ exports.userRouter.get('/transactions/bulk', user_1.userMiddleware, (req, res) =
     };
     // Filter by Title (if provided)
     if (req.query.title && req.query.title !== "") {
-        filters.transaction = {
+        filters.transactions = {
             some: {
                 event: {
                     title: {
@@ -526,7 +596,7 @@ exports.userRouter.get('/transactions/bulk', user_1.userMiddleware, (req, res) =
     }
     // Filter by Type (if provided and not "all")
     if (req.query.type && req.query.type !== "all") {
-        filters.transaction = {
+        filters.transactions = {
             some: {
                 event: {
                     type: req.query.type
@@ -552,7 +622,7 @@ exports.userRouter.get('/transactions/bulk', user_1.userMiddleware, (req, res) =
                 startDate = null;
         }
         if (startDate) {
-            filters.transaction = {
+            filters.transactions = {
                 some: {
                     created_at: {
                         gte: startDate
@@ -568,17 +638,17 @@ exports.userRouter.get('/transactions/bulk', user_1.userMiddleware, (req, res) =
             .add(30, "minutes")
             .format("YYYY-MM-DDTHH:mm:ss[Z]");
         // Ensure filters.transaction is always structured properly
-        if (!filters.transaction) {
-            filters.transaction = { some: { event: {} } };
+        if (!filters.transactions) {
+            filters.transactions = { some: { event: {} } };
         }
-        else if (!filters.transaction.some) {
-            filters.transaction.some = { event: {} };
+        else if (!filters.transactions.some) {
+            filters.transactions.some = { event: {} };
         }
         if (req.query.status === "active") {
-            filters.transaction.some.event.date = { gte: currentDateTimeIST };
+            filters.transactions.some.event.date = { gte: currentDateTimeIST };
         }
         else if (req.query.status === "closed") {
-            filters.transaction.some.event.date = { lt: currentDateTimeIST };
+            filters.transactions.some.event.date = { lt: currentDateTimeIST };
         }
     }
     try {
@@ -589,11 +659,11 @@ exports.userRouter.get('/transactions/bulk', user_1.userMiddleware, (req, res) =
             select: {
                 _count: {
                     select: {
-                        transaction: true,
+                        transactions: true,
                     },
                 },
-                transaction: {
-                    where: ((_a = filters.transaction) === null || _a === void 0 ? void 0 : _a.some) || {},
+                transactions: {
+                    where: ((_a = filters.transactions) === null || _a === void 0 ? void 0 : _a.some) || {},
                     select: {
                         id: true,
                         eventId: true,
@@ -620,7 +690,7 @@ exports.userRouter.get('/transactions/bulk', user_1.userMiddleware, (req, res) =
                                 ticket_category: true,
                                 ticket_quantity: true,
                                 ticket_price: true,
-                                attendee: {
+                                attendees: {
                                     select: {
                                         name: true,
                                         age: true
@@ -638,10 +708,10 @@ exports.userRouter.get('/transactions/bulk', user_1.userMiddleware, (req, res) =
                 }
             }
         });
-        const total_transactions = (transactions === null || transactions === void 0 ? void 0 : transactions._count.transaction) || 0;
+        const total_transactions = (transactions === null || transactions === void 0 ? void 0 : transactions._count.transactions) || 0;
         res.json({
             total_transactions,
-            transactions: transactions === null || transactions === void 0 ? void 0 : transactions.transaction
+            transactions: transactions === null || transactions === void 0 ? void 0 : transactions.transactions
         });
     }
     catch (error) {
@@ -661,11 +731,14 @@ exports.userRouter.get('/dashboard/analytics', user_1.userMiddleware, (req, res)
                 events: {
                     select: {
                         title: true,
-                        price: true,
-                        tickets_sold: true,
-                        total_tickets: true,
+                        vip_ticket_price: true,
+                        vip_tickets_sold: true,
+                        vip_tickets_count: true,
+                        general_ticket_price: true,
+                        general_tickets_sold: true,
+                        general_tickets_count: true,
                         date: true,
-                        transaction: {
+                        transactions: {
                             select: {
                                 amount: true,
                                 created_at: true,
@@ -673,7 +746,7 @@ exports.userRouter.get('/dashboard/analytics', user_1.userMiddleware, (req, res)
                                     select: {
                                         ticket_category: true,
                                         payment_type: true,
-                                        attendee: {
+                                        attendees: {
                                             select: {
                                                 age: true,
                                             }
@@ -694,25 +767,27 @@ exports.userRouter.get('/dashboard/analytics', user_1.userMiddleware, (req, res)
         let totalRevenue = 0;
         let totalTicketsSold = 0;
         result.events.forEach(event => {
-            totalTicketsSold += event.tickets_sold || 0;
-            event.transaction.forEach(txn => {
+            const eventTotalTicketsSold = (event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0);
+            totalTicketsSold += eventTotalTicketsSold;
+            event.transactions.forEach(txn => {
                 totalRevenue += txn.amount || 0;
             });
         });
-        const avgTicketPrice = totalTicketsSold > 0 ? (totalRevenue / totalTicketsSold).toFixed(2) : 0;
+        const avgTicketPrice = totalTicketsSold > 0 ? (totalRevenue / totalTicketsSold).toFixed(2) : "0.00";
         // Top 3 performing events
         let topEvents = result.events.map(event => {
-            const totalRevenue = event.transaction.reduce((sum, txn) => sum + txn.amount, 0);
-            const conversionRate = event.total_tickets
-                ? ((event.tickets_sold / event.total_tickets) * 100).toFixed(2) + "%"
+            const eventTotalTicketsSold = (event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0);
+            const totalRevenue = event.transactions.reduce((sum, txn) => sum + txn.amount, 0);
+            const totalAvailableTickets = (event.vip_tickets_count || 0) + (event.general_tickets_count || 0);
+            const conversionRate = totalAvailableTickets > 0
+                ? ((eventTotalTicketsSold / totalAvailableTickets) * 100).toFixed(2) + "%"
                 : "N/A";
-            const status = event.date;
             return {
                 title: event.title,
                 revenue: totalRevenue,
-                ticketsSold: event.tickets_sold,
+                ticketsSold: eventTotalTicketsSold,
                 conversionRate,
-                status,
+                status: event.date // Convert Date object to readable format
             };
         });
         // Sort by revenue in descending order and take the top 3
@@ -727,8 +802,7 @@ exports.userRouter.get('/dashboard/analytics', user_1.userMiddleware, (req, res)
         });
     }
     catch (error) {
-        console.log('Error occured while fetching analytics');
-        console.error(error);
+        console.error('Error occurred while fetching analytics:', error);
         res.status(500).json({ message: "Internal server error" });
     }
 }));
@@ -743,10 +817,13 @@ exports.userRouter.get('/dashboard/overview', user_1.userMiddleware, (req, res) 
                 events: {
                     select: {
                         title: true,
-                        price: true,
-                        tickets_sold: true,
-                        total_tickets: true,
-                        transaction: {
+                        vip_ticket_price: true,
+                        vip_tickets_sold: true,
+                        vip_tickets_count: true,
+                        general_ticket_price: true,
+                        general_tickets_sold: true,
+                        general_tickets_count: true,
+                        transactions: {
                             select: {
                                 amount: true,
                             }
@@ -762,17 +839,17 @@ exports.userRouter.get('/dashboard/overview', user_1.userMiddleware, (req, res) 
         // Metrics
         const totalEvents = result.events.length;
         const totalRevenue = result.events.reduce((sum, event) => {
-            const eventRevenue = event.transaction.reduce((revenueSum, tx) => revenueSum + (tx.amount || 0), 0);
+            const eventRevenue = event.transactions.reduce((revenueSum, tx) => revenueSum + (tx.amount || 0), 0);
             return sum + eventRevenue;
         }, 0);
-        const totalTicketsSold = result.events.reduce((sum, event) => sum + (event.tickets_sold || 0), 0);
-        const totalTickets = result.events.reduce((sum, event) => sum + (event.total_tickets || 0), 0);
-        const conversionRate = totalTickets > 0 ? (totalTicketsSold / totalTickets) * 100 : 0;
+        const totalTicketsSold = result.events.reduce((sum, event) => sum + ((event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0)), 0);
+        const totalTickets = result.events.reduce((sum, event) => sum + ((event.vip_tickets_count || 0) + (event.general_tickets_count || 0)), 0);
+        const conversionRate = totalTickets > 0 ? ((totalTicketsSold / totalTickets) * 100).toFixed(2) : "0.00";
         const metrics = {
             totalEvents,
             totalRevenue,
             totalTicketsSold,
-            conversionRate: conversionRate.toFixed(2)
+            conversionRate
         };
         // Top 3 upcoming events
         const currentDateTimeIST = moment_timezone_1.default
@@ -786,6 +863,15 @@ exports.userRouter.get('/dashboard/overview', user_1.userMiddleware, (req, res) 
             },
             select: {
                 events: {
+                    where: {
+                        date: {
+                            gte: currentDateTimeIST,
+                        },
+                    },
+                    orderBy: {
+                        date: "asc",
+                    },
+                    take: 3,
                     select: {
                         title: true,
                         date: true,
@@ -797,28 +883,20 @@ exports.userRouter.get('/dashboard/overview', user_1.userMiddleware, (req, res) 
                             }
                         },
                         time_frame: true,
-                        tickets_sold: true,
-                    },
-                    where: {
-                        date: {
-                            gte: currentDateTimeIST,
-                        },
-                    },
-                    orderBy: {
-                        date: "asc",
-                    },
-                    take: 3
+                        general_tickets_sold: true,
+                        vip_tickets_sold: true
+                    }
                 }
-            },
+            }
         });
         const upcomingEvents = fetched_events ? fetched_events.events.map(event => {
             var _a, _b, _c;
             return ({
                 title: event.title,
-                date: event.date,
+                date: event.date, // Keeping this as is
                 location: `${(_a = event.location[0]) === null || _a === void 0 ? void 0 : _a.venue}, ${(_b = event.location[0]) === null || _b === void 0 ? void 0 : _b.city}, ${(_c = event.location[0]) === null || _c === void 0 ? void 0 : _c.country}`,
                 time: event.time_frame,
-                ticketsSold: event.tickets_sold || 0,
+                ticketsSold: (event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0),
             });
         }) : [];
         res.status(200).json({
@@ -827,10 +905,8 @@ exports.userRouter.get('/dashboard/overview', user_1.userMiddleware, (req, res) 
         });
     }
     catch (error) {
-        console.log('Error occurred while fetching overview');
-        console.error(error);
+        console.error('Error occurred while fetching overview:', error);
         res.status(500).json({ message: "Internal server error" });
-        return;
     }
 }));
 exports.userRouter.get('/dashboard/overview/recent-activity', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -841,7 +917,7 @@ exports.userRouter.get('/dashboard/overview/recent-activity', user_1.userMiddlew
                 id: req.userId,
             },
             select: {
-                transaction: {
+                transactions: {
                     select: {
                         event: {
                             select: {
@@ -855,7 +931,7 @@ exports.userRouter.get('/dashboard/overview/recent-activity', user_1.userMiddlew
                         },
                         created_at: true
                     },
-                    take: 3,
+                    take: 5,
                     orderBy: { created_at: 'desc' }
                 },
                 events: {
@@ -864,7 +940,7 @@ exports.userRouter.get('/dashboard/overview/recent-activity', user_1.userMiddlew
                         updated_at: true,
                         created_at: true,
                     },
-                    take: 3,
+                    take: 5,
                     orderBy: { updated_at: 'desc' },
                 }
             }

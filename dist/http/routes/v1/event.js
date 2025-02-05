@@ -14,57 +14,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.eventRouter = void 0;
 const express_1 = __importDefault(require("express"));
-const user_1 = require("../../middleware/user");
 const index_1 = __importDefault(require("../../../db/index"));
 const moment_timezone_1 = __importDefault(require("moment-timezone"));
 exports.eventRouter = express_1.default.Router();
-exports.eventRouter.post("/", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log("inside event");
-    try {
-        if (!req.userId) {
-            res.status(401).json({ message: "Unauthorized" });
-            return;
-        }
-        const isoDate = new Date(`${req.body.date}T${req.body.time_frame[0].time}Z`);
-        const event = yield index_1.default.event.create({
-            data: {
-                title: req.body.title,
-                type: req.body.type,
-                category: req.body.category,
-                description: req.body.description,
-                price: req.body.price,
-                total_tickets: req.body.total_tickets !== null ? req.body.total_tickets : null,
-                tickets_sold: 0,
-                date: isoDate,
-                time_frame: req.body.time_frame,
-                images: req.body.images,
-                creatorId: req.userId,
-                location: {
-                    create: [
-                        {
-                            venue: req.body.location[0].venue,
-                            city: req.body.location[0].city,
-                            country: req.body.location[0].country,
-                        },
-                    ],
-                },
-                organizer_details: {
-                    create: [
-                        {
-                            phone: req.body.organizer_details[0].phone,
-                            email: req.body.organizer_details[0].email,
-                        },
-                    ],
-                },
-            },
-        });
-        res.status(201).json({ eventId: event.id });
-    }
-    catch (error) {
-        console.log("error in event", error);
-        res.status(500).json({ message: "Internal Server Error" });
-    }
-}));
 exports.eventRouter.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log(req.query);
     const limit = 9;
@@ -103,14 +55,14 @@ exports.eventRouter.get("/", (req, res) => __awaiter(void 0, void 0, void 0, fun
         }
         // Price Filter (Ensure valid numbers)
         if (req.query.min_price || req.query.max_price) {
-            filters.price = {};
+            filters.general_ticket_price = {};
             if (typeof req.query.min_price === "string" &&
                 !isNaN(Number(req.query.min_price))) {
-                filters.price.gte = Number(req.query.min_price);
+                filters.general_ticket_price.gte = Number(req.query.min_price);
             }
             if (typeof req.query.max_price === "string" &&
                 !isNaN(Number(req.query.max_price))) {
-                filters.price.lte = Number(req.query.max_price);
+                filters.general_ticket_price.lte = Number(req.query.max_price);
             }
         }
         // Date Filter
@@ -140,7 +92,7 @@ exports.eventRouter.get("/", (req, res) => __awaiter(void 0, void 0, void 0, fun
                         country: true, // Ensure country is selected
                     },
                 },
-                price: true,
+                general_ticket_price: true,
             },
             take: limit,
             skip: skip,
@@ -182,7 +134,7 @@ exports.eventRouter.get("/upcoming", (req, res) => __awaiter(void 0, void 0, voi
                         city: true,
                     },
                 },
-                price: true,
+                general_ticket_price: true,
                 time_frame: true,
             },
             where: {
@@ -214,9 +166,12 @@ exports.eventRouter.get("/:eventId", (req, res) => __awaiter(void 0, void 0, voi
                 type: true,
                 category: true,
                 description: true,
-                price: true,
-                total_tickets: true,
-                tickets_sold: true,
+                vip_ticket_price: true,
+                vip_tickets_count: true,
+                vip_tickets_sold: true,
+                general_ticket_price: true,
+                general_tickets_count: true,
+                general_tickets_sold: true,
                 date: true,
                 time_frame: true,
                 images: true,
