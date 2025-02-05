@@ -18,6 +18,7 @@ const user_1 = require("../../middleware/user");
 const index_1 = __importDefault(require("../../../db/index"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const moment_timezone_1 = __importDefault(require("moment-timezone"));
+const utils_1 = require("../../utils");
 exports.userRouter = express_1.default.Router();
 exports.userRouter.post("/wishlist/:eventId", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("inside wishlist");
@@ -774,6 +775,24 @@ exports.userRouter.get('/dashboard/analytics', user_1.userMiddleware, (req, res)
             });
         });
         const avgTicketPrice = totalTicketsSold > 0 ? (totalRevenue / totalTicketsSold).toFixed(2) : "0.00";
+        // Intialize age categories
+        let ageDistribution = {
+            '<15 age': 0,
+            '15-29 age': 0,
+            '30-44 age': 0,
+            '45-59 age': 0,
+            '60-74 age': 0,
+            '75-89 age': 0,
+            '90+ age': 0
+        };
+        result.events.forEach(event => {
+            event.transactions.forEach(txn => {
+                txn.ticket_details[0].attendees.forEach(attendee => {
+                    const category = (0, utils_1.categorizeAge)(attendee.age);
+                    ageDistribution[category]++;
+                });
+            });
+        });
         // Top 3 performing events
         let topEvents = result.events.map(event => {
             const eventTotalTicketsSold = (event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0);
@@ -798,7 +817,8 @@ exports.userRouter.get('/dashboard/analytics', user_1.userMiddleware, (req, res)
                 totalTicketsSold,
                 avgTicketPrice,
             },
-            topEvents: topEvents
+            topEvents: topEvents,
+            ageDistribution
         });
     }
     catch (error) {

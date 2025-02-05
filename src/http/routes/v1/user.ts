@@ -4,6 +4,7 @@ import client from "../../../db/index";
 import bcrypt from 'bcrypt';
 import moment from "moment-timezone";
 import { LOCATION_TYPE, ORGANIZER_DETAILS_TYPE } from "../../types";
+import { categorizeAge } from "../../utils";
 
 export const userRouter = express.Router();
 
@@ -806,6 +807,26 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
 
         const avgTicketPrice = totalTicketsSold > 0 ? (totalRevenue / totalTicketsSold).toFixed(2) : "0.00";
 
+        // Intialize age categories
+        let ageDistribution = {
+            '<15 age': 0,
+            '15-29 age': 0,
+            '30-44 age': 0,
+            '45-59 age': 0,
+            '60-74 age': 0,
+            '75-89 age': 0,
+            '90+ age': 0
+        };
+
+        result.events.forEach(event => {
+            event.transactions.forEach(txn => {
+                txn.ticket_details[0].attendees.forEach(attendee => {
+                    const category = categorizeAge(attendee.age);
+                    ageDistribution[category]++;
+                });
+            });
+        });       
+
         // Top 3 performing events
         let topEvents = result.events.map(event => {
             const eventTotalTicketsSold = (event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0);
@@ -833,7 +854,8 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
                 totalTicketsSold,
                 avgTicketPrice,
             },
-            topEvents: topEvents
+            topEvents: topEvents,
+            ageDistribution
         });
 
     } catch (error) {
