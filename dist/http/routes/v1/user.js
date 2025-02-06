@@ -775,7 +775,30 @@ exports.userRouter.get('/dashboard/analytics', user_1.userMiddleware, (req, res)
             });
         });
         const avgTicketPrice = totalTicketsSold > 0 ? (totalRevenue / totalTicketsSold).toFixed(2) : "0.00";
-        // Intialize age categories
+        // Revenue trend analysis
+        const revenueTrend = {};
+        const today = new Date();
+        const last7Days = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
+        // Initialize revenueTrend with 0 for the last 7 days
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+            const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            revenueTrend[label] = 0;
+        }
+        result.events.forEach(event => {
+            event.transactions.forEach(txn => {
+                const txnDate = new Date(txn.created_at);
+                if (txnDate >= last7Days && txnDate <= today) {
+                    const label = txnDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    revenueTrend[label] += txn.amount || 0;
+                }
+            });
+        });
+        // Format Revenue Trend for frontend
+        const formattedRevenueTrend = Object.entries(revenueTrend)
+            .map(([label, revenue]) => ({ label, revenue }))
+            .sort((a, b) => new Date(a.label).getTime() - new Date(b.label).getTime());
+        // Attendee distribution analysis
         let ageDistribution = {
             '<15 age': 0,
             '15-29 age': 0,
@@ -818,7 +841,10 @@ exports.userRouter.get('/dashboard/analytics', user_1.userMiddleware, (req, res)
                 avgTicketPrice,
             },
             topEvents: topEvents,
-            ageDistribution
+            chartData: {
+                ageDistribution,
+                revenueTrendAnalysis: formattedRevenueTrend
+            }
         });
     }
     catch (error) {

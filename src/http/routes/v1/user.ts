@@ -807,7 +807,36 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
 
         const avgTicketPrice = totalTicketsSold > 0 ? (totalRevenue / totalTicketsSold).toFixed(2) : "0.00";
 
-        // Intialize age categories
+        // Revenue trend analysis
+        const revenueTrend: { [key: string]: number } = {};
+        const today = new Date();
+        const last7Days = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
+
+        // Initialize revenueTrend with 0 for the last 7 days
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+            const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            revenueTrend[label] = 0;
+        }
+
+        result.events.forEach(event => {
+            event.transactions.forEach(txn => {
+                const txnDate = new Date(txn.created_at);
+                if (txnDate >= last7Days && txnDate <= today) {
+                    const label = txnDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    revenueTrend[label] += txn.amount || 0;
+                }
+            });
+        });
+
+        // Format Revenue Trend for frontend
+        const formattedRevenueTrend = Object.entries(revenueTrend)
+            .map(([label, revenue]) => ({ label, revenue }))
+            .sort((a, b) => new Date(a.label).getTime() - new Date(b.label).getTime());
+
+
+
+        // Attendee distribution analysis
         let ageDistribution = {
             '<15 age': 0,
             '15-29 age': 0,
@@ -825,15 +854,15 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
                     ageDistribution[category]++;
                 });
             });
-        });       
+        });
 
         // Top 3 performing events
         let topEvents = result.events.map(event => {
             const eventTotalTicketsSold = (event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0);
             const totalRevenue = event.transactions.reduce((sum, txn) => sum + txn.amount, 0);
             const totalAvailableTickets = (event.vip_tickets_count || 0) + (event.general_tickets_count || 0);
-            const conversionRate = totalAvailableTickets > 0 
-                ? ((eventTotalTicketsSold / totalAvailableTickets) * 100).toFixed(2) + "%" 
+            const conversionRate = totalAvailableTickets > 0
+                ? ((eventTotalTicketsSold / totalAvailableTickets) * 100).toFixed(2) + "%"
                 : "N/A";
 
             return {
@@ -855,7 +884,10 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
                 avgTicketPrice,
             },
             topEvents: topEvents,
-            ageDistribution
+            chartData: {
+                ageDistribution,
+                revenueTrendAnalysis: formattedRevenueTrend
+            }
         });
 
     } catch (error) {
@@ -904,13 +936,13 @@ userRouter.get('/dashboard/overview', userMiddleware, async (req, res) => {
             return sum + eventRevenue;
         }, 0);
 
-        const totalTicketsSold = result.events.reduce((sum, event) => 
-            sum + ((event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0)), 
-        0);
+        const totalTicketsSold = result.events.reduce((sum, event) =>
+            sum + ((event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0)),
+            0);
 
-        const totalTickets = result.events.reduce((sum, event) => 
-            sum + ((event.vip_tickets_count || 0) + (event.general_tickets_count || 0)), 
-        0);
+        const totalTickets = result.events.reduce((sum, event) =>
+            sum + ((event.vip_tickets_count || 0) + (event.general_tickets_count || 0)),
+            0);
 
         const conversionRate = totalTickets > 0 ? ((totalTicketsSold / totalTickets) * 100).toFixed(2) : "0.00";
 
