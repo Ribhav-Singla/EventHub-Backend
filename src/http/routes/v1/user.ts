@@ -1194,6 +1194,29 @@ userRouter.get('/dashboard/analytics/:eventId', userMiddleware, async (req, res)
             .map(([label, revenue]) => ({ label, revenue }))
             .sort((a, b) => new Date(a.label).getTime() - new Date(b.label).getTime());
 
+        // Payment type distribution
+        let creditCard_count = 0;
+        let bankTransfer_count = 0;
+        let digitalWallet_count = 0;
+
+        // Iterate through transactions to populate payment type distribution
+        result.transactions.forEach(transaction => {
+            transaction.ticket_details.forEach(ticket => {
+                if (ticket.payment_type == "Bank Transfer") {
+                    bankTransfer_count++;
+                } else if (ticket.payment_type == "Digital Wallet") {
+                    digitalWallet_count++;
+                } else {
+                    creditCard_count++;
+                }
+            })
+        })
+
+        const paymentTypeChart = {
+            labels: ['Bank Transfer', 'Digital Wallet', 'Credit Card'],
+            values: [bankTransfer_count, digitalWallet_count, creditCard_count],
+        };
+
         res.status(200).json({
             id: result.id,
             title: result.title,
@@ -1209,7 +1232,8 @@ userRouter.get('/dashboard/analytics/:eventId', userMiddleware, async (req, res)
                 averageTicketPrice,
             },
             ticketsTypeSoldChart,
-            revenueTrendChart: formattedRevenueTrend
+            revenueTrendChart: formattedRevenueTrend,
+            paymentTypeChart
         });
 
 
@@ -1219,6 +1243,3 @@ userRouter.get('/dashboard/analytics/:eventId', userMiddleware, async (req, res)
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });
-
-
-
