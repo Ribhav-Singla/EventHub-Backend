@@ -517,6 +517,7 @@ userRouter.post('/ticket/transaction/:eventId', userMiddleware, async (req, res)
                                     create: req.body.attendees.map((attendee: any) => ({
                                         name: attendee.name,
                                         age: attendee.age,
+                                        gender: attendee.gender
                                     })),
                                 },
                             },
@@ -565,7 +566,8 @@ userRouter.get('/ticket/:transactionId', userMiddleware, async (req, res) => {
                         attendees: {
                             select: {
                                 name: true,
-                                age: true
+                                age: true,
+                                gender: true,
                             }
                         }
                     }
@@ -1059,5 +1061,136 @@ userRouter.get('/dashboard/overview/recent-activity', userMiddleware, async (req
         return
     }
 })
+
+userRouter.get('/dashboard/analytics/:eventId', userMiddleware, async (req, res) => {
+    console.log('inside event analytics');
+    try {
+        const result = await client.event.findUnique({
+            where: {
+                id: req.params.eventId,
+                creatorId: req.userId,
+            },
+            select: {
+                id: true,
+                title: true,
+                type: true,
+                category: true,
+                vip_ticket_price: true,
+                vip_tickets_count: true,
+                vip_tickets_sold: true,
+                general_ticket_price: true,
+                general_tickets_count: true,
+                general_tickets_sold: true,
+                date: true,
+                time_frame: true,
+                transactions: {
+                    select: {
+                        amount: true,
+                        created_at: true,
+                        ticket_details: {
+                            select: {
+                                ticket_quantity: true,
+                                ticket_category: true,
+                                ticket_price: true,
+                                payment_type: true,
+                                attendees: {
+                                    select: {
+                                        name: true,
+                                        gender: true,
+                                        age: true,
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        if (!result) {
+            res.status(404).json({ message: 'Event not found' });
+            return;
+        }
+
+        // Compute total revenue
+        let totalRevenue = 0;
+        result.transactions.forEach(transaction => {
+            totalRevenue += transaction.amount;
+        });
+
+        // Compute total tickets sold
+        let totalTicketsSold = 0;
+        let vipTicketsSold = 0;
+        let generalTicketsSold = 0;
+        result.transactions.forEach(transaction => {
+            transaction.ticket_details.forEach(ticket => {
+                totalTicketsSold += ticket.ticket_quantity;
+                if (ticket.ticket_category === 'VIP Access') {
+                    vipTicketsSold += ticket.ticket_quantity;
+                } else if (ticket.ticket_category === 'General Admission') {
+                    generalTicketsSold += ticket.ticket_quantity;
+                }
+            });
+        });
+
+        // Compute gender breakdown
+        let maleAttendees = 0;
+        let femaleAttendees = 0;
+
+        result.transactions.forEach(transaction => {
+            transaction.ticket_details.forEach(ticket => {
+                ticket.attendees.forEach(attendee => {
+                    if (attendee.gender === 'male') {
+                        maleAttendees++;
+                    } else {
+                        femaleAttendees++;
+                    }
+                });
+            });
+        });
+
+        // Compute average ticket price
+        let totalTicketRevenue = 0;
+        let totalTickets = 0;
+        result.transactions.forEach(transaction => {
+            transaction.ticket_details.forEach(ticket => {
+                totalTicketRevenue += ticket.ticket_price * ticket.ticket_quantity;
+                totalTickets += ticket.ticket_quantity;
+            });
+        });
+
+        const averageTicketPrice = totalTickets > 0 ? totalTicketRevenue / totalTickets : 0;
+
+        // Number of customers of the vip ticket vs general ticket
+        const ticketsTypeSoldChart = {
+            labels: ['VIP Tickets', 'General Tickets'],
+            values: [vipTicketsSold, generalTicketsSold],
+        };
+
+        res.status(200).json({
+            id: result.id,
+            title: result.title,
+            type: result.type,
+            category: result.category,
+            date: result.date,
+            time_frame: result.time_frame,
+            metrics: {
+                totalRevenue,
+                totalTicketsSold,
+                maleAttendees,
+                femaleAttendees,
+                averageTicketPrice,
+            },
+            ticketsTypeSoldChart,
+        });
+
+
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
 
 

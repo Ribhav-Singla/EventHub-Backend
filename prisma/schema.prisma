@@ -78,8 +78,8 @@ model Transaction {
   id             String   @id @default(cuid())
   userId         String
   user           User     @relation(fields: [userId], references: [id])
-  eventId        String?
-  event          Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  eventId        String
+  event          Event   @relation(fields: [eventId], references: [id])
   amount         Int
   ticket_details Ticket[]
   created_at     DateTime @default(now())
@@ -101,6 +101,7 @@ model Attendee {
   ticketId String
   ticket   Ticket @relation(fields: [ticketId], references: [id])
   name     String
+  gender   String
   age      Int
 }
 
