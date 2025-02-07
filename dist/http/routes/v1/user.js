@@ -1076,7 +1076,7 @@ exports.userRouter.get('/dashboard/analytics/:eventId', user_1.userMiddleware, (
         result.transactions.forEach(transaction => {
             transaction.ticket_details.forEach(ticket => {
                 ticket.attendees.forEach(attendee => {
-                    if (attendee.gender === 'male') {
+                    if (attendee.gender === 'Male') {
                         maleAttendees++;
                     }
                     else {
@@ -1100,6 +1100,27 @@ exports.userRouter.get('/dashboard/analytics/:eventId', user_1.userMiddleware, (
             labels: ['VIP Tickets', 'General Tickets'],
             values: [vipTicketsSold, generalTicketsSold],
         };
+        const revenueTrend = {};
+        const today = new Date();
+        const last7Days = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
+        // Initialize revenueTrend with 0 for the last 7 days
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+            const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            revenueTrend[label] = 0;
+        }
+        // Iterate through transactions to populate revenueTrend
+        result.transactions.forEach(transaction => {
+            const txnDate = new Date(transaction.created_at);
+            if (txnDate >= last7Days && txnDate <= today) {
+                const label = txnDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                revenueTrend[label] += transaction.amount || 0;
+            }
+        });
+        // Format Revenue Trend for frontend
+        const formattedRevenueTrend = Object.entries(revenueTrend)
+            .map(([label, revenue]) => ({ label, revenue }))
+            .sort((a, b) => new Date(a.label).getTime() - new Date(b.label).getTime());
         res.status(200).json({
             id: result.id,
             title: result.title,
@@ -1115,6 +1136,7 @@ exports.userRouter.get('/dashboard/analytics/:eventId', user_1.userMiddleware, (
                 averageTicketPrice,
             },
             ticketsTypeSoldChart,
+            revenueTrendChart: formattedRevenueTrend
         });
     }
     catch (error) {
