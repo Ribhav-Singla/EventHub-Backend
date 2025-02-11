@@ -46,6 +46,7 @@ exports.router.post('/signup', (req, res) => __awaiter(void 0, void 0, void 0, f
             userId: user.id
         }, config_1.JWT_PASSWORD);
         res.json({
+            id: user.id,
             firstname: user.firstname,
             lastname: user.lastname,
             email: user.email,
@@ -86,6 +87,7 @@ exports.router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, fu
             userId: user.id
         }, config_1.JWT_PASSWORD);
         res.json({
+            id: user.id,
             firstname: user.firstname,
             lastname: user.lastname,
             email: user.email,
@@ -129,6 +131,7 @@ exports.router.post('/google_auth/signup', (req, res) => __awaiter(void 0, void 
             userId: user.id
         }, config_1.JWT_PASSWORD);
         res.json({
+            id: user.id,
             firstname: user.firstname,
             lastname: user.lastname,
             email: user.email,
@@ -169,6 +172,7 @@ exports.router.post('/google_auth/login', (req, res) => __awaiter(void 0, void 0
             userId: user.id
         }, config_1.JWT_PASSWORD);
         res.json({
+            id: user.id,
             firstname: given_name || user.firstname,
             lastname: family_name || user.lastname,
             email: email || user.email,
@@ -194,6 +198,7 @@ exports.router.post('/me', user_1.userMiddleware, (req, res) => __awaiter(void 0
             return;
         }
         res.json({
+            id: user.id,
             firstname: user.firstname,
             lastname: user.lastname,
             email: user.email,

@@ -36,6 +36,7 @@ router.post('/signup', async (req, res) => {
         }, JWT_PASSWORD);
 
         res.json({
+            id: user.id,
             firstname: user.firstname,
             lastname: user.lastname,
             email: user.email,
@@ -77,6 +78,7 @@ router.post('/login', async (req, res) => {
         }, JWT_PASSWORD);
 
         res.json({
+            id: user.id,
             firstname: user.firstname,
             lastname: user.lastname,
             email: user.email,
@@ -128,6 +130,7 @@ router.post('/google_auth/signup', async (req, res) => {
         }, JWT_PASSWORD);
 
         res.json({
+            id:user.id,
             firstname: user.firstname,
             lastname: user.lastname,
             email: user.email,
@@ -175,6 +178,7 @@ router.post('/google_auth/login', async (req, res) => {
         }, JWT_PASSWORD);
 
         res.json({
+            id:user.id,
             firstname: given_name || user.firstname,
             lastname: family_name || user.lastname,
             email: email || user.email,
@@ -200,6 +204,7 @@ router.post('/me', userMiddleware, async (req, res) => {
             return
         }
         res.json({
+            id: user.id,
             firstname: user.firstname,
             lastname: user.lastname,
             email: user.email,

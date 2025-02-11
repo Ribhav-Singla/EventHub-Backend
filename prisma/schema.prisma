@@ -27,7 +27,6 @@ model User {
   events                  Event[]
   transactions            Transaction[]
   wishlist                Wishlist[]
-  discussions             Discussion[]
   created_at              DateTime      @default(now())
   updated_at              DateTime      @updatedAt
 }
@@ -53,7 +52,6 @@ model Event {
   creator               User          @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   transactions          Transaction[]
   wishlist              Wishlist[]
-  discussions           Discussion[]
   created_at            DateTime      @default(now())
   updated_at            DateTime      @default(now()) @updatedAt
   isDeleted             Boolean       @default(false)
@@ -114,21 +112,4 @@ model Wishlist {
   eventId String?
   event   Event?   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   addedAt DateTime @default(now())
-}
-
-model Discussion {
-  id        String   @id @default(cuid())
-  content   String
-  likes     Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  authorId String
-  eventId  String
-  parentId String? // Null if it is root
-
-  author  User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  event   Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  parent  Discussion?  @relation("Discussion_replies", fields: [parentId], references: [id])
-  replies Discussion[] @relation("Discussion_replies")
 }
