@@ -1125,6 +1125,7 @@ exports.userRouter.get('/dashboard/analytics/:eventId', user_1.userMiddleware, (
         let creditCard_count = 0;
         let bankTransfer_count = 0;
         let digitalWallet_count = 0;
+        let free_count = 0;
         // Iterate through transactions to populate payment type distribution
         result.transactions.forEach(transaction => {
             transaction.ticket_details.forEach(ticket => {
@@ -1134,14 +1135,17 @@ exports.userRouter.get('/dashboard/analytics/:eventId', user_1.userMiddleware, (
                 else if (ticket.payment_type == "Digital Wallet") {
                     digitalWallet_count++;
                 }
+                else if (ticket.payment_type == "Free") {
+                    free_count++;
+                }
                 else {
                     creditCard_count++;
                 }
             });
         });
         const paymentTypeChart = {
-            labels: ['Bank Transfer', 'Digital Wallet', 'Credit Card'],
-            values: [bankTransfer_count, digitalWallet_count, creditCard_count],
+            labels: ['Bank Transfer', 'Digital Wallet', 'Credit Card', 'Free'],
+            values: [bankTransfer_count, digitalWallet_count, creditCard_count, free_count],
         };
         res.status(200).json({
             id: result.id,
