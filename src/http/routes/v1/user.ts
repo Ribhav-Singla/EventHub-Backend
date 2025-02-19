@@ -1159,7 +1159,7 @@ userRouter.get('/dashboard/analytics/:eventId', userMiddleware, async (req, res)
             });
         });
 
-        const averageTicketPrice = totalTickets > 0 ? totalTicketRevenue / totalTickets : 0;
+        const averageTicketPrice = totalTickets > 0 ? parseFloat((totalTicketRevenue / totalTickets).toFixed(2)) : 0;
 
         // Number of customers of the vip ticket vs general ticket
         const ticketsTypeSoldChart = {
@@ -1171,6 +1171,7 @@ userRouter.get('/dashboard/analytics/:eventId', userMiddleware, async (req, res)
         type RevenueTrend = { [key: string]: number };
         const revenueTrend: RevenueTrend = {};
         const today = new Date();
+        const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
         const last7Days = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
 
         // Initialize revenueTrend with 0 for the last 7 days
@@ -1193,6 +1194,18 @@ userRouter.get('/dashboard/analytics/:eventId', userMiddleware, async (req, res)
         const formattedRevenueTrend = Object.entries(revenueTrend)
             .map(([label, revenue]) => ({ label, revenue }))
             .sort((a, b) => new Date(a.label).getTime() - new Date(b.label).getTime());
+
+        // Comparison btw todays revenue and the yesterdays revenue
+        const todayLabel = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const yesterdayLabel = yesterday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const todayRevenue = revenueTrend[todayLabel] || 0;
+        const yesterdayRevenue = revenueTrend[yesterdayLabel] || 0;
+        const revenueDiff = todayRevenue - yesterdayRevenue;
+        const revenueChange = {
+            amount: revenueDiff,
+            percentage: yesterdayRevenue ? ((revenueDiff / yesterdayRevenue) * 100).toFixed(2) : "∞",
+            direction: revenueDiff > 0 ? "increase" : revenueDiff < 0 ? "decrease" : "no change",
+        };
 
         // Payment type distribution
         let creditCard_count = 0;
@@ -1217,7 +1230,7 @@ userRouter.get('/dashboard/analytics/:eventId', userMiddleware, async (req, res)
 
         const paymentTypeChart = {
             labels: ['Bank Transfer', 'Digital Wallet', 'Credit Card', 'Free'],
-            values: [bankTransfer_count, digitalWallet_count, creditCard_count,free_count],
+            values: [bankTransfer_count, digitalWallet_count, creditCard_count, free_count],
         };
 
         res.status(200).json({
@@ -1227,6 +1240,11 @@ userRouter.get('/dashboard/analytics/:eventId', userMiddleware, async (req, res)
             category: result.category,
             date: result.date,
             time_frame: result.time_frame,
+            vip_tickets_count: result.vip_tickets_count,
+            general_tickets_count: result.general_tickets_count,
+            todayLabel: todayLabel,
+            todayRevenue: todayRevenue,
+            revenueChange: revenueChange,
             metrics: {
                 totalRevenue,
                 totalTicketsSold,

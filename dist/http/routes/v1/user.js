@@ -1094,7 +1094,7 @@ exports.userRouter.get('/dashboard/analytics/:eventId', user_1.userMiddleware, (
                 totalTickets += ticket.ticket_quantity;
             });
         });
-        const averageTicketPrice = totalTickets > 0 ? totalTicketRevenue / totalTickets : 0;
+        const averageTicketPrice = totalTickets > 0 ? parseFloat((totalTicketRevenue / totalTickets).toFixed(2)) : 0;
         // Number of customers of the vip ticket vs general ticket
         const ticketsTypeSoldChart = {
             labels: ['VIP Tickets', 'General Tickets'],
@@ -1102,6 +1102,7 @@ exports.userRouter.get('/dashboard/analytics/:eventId', user_1.userMiddleware, (
         };
         const revenueTrend = {};
         const today = new Date();
+        const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
         const last7Days = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
         // Initialize revenueTrend with 0 for the last 7 days
         for (let i = 0; i < 7; i++) {
@@ -1121,6 +1122,17 @@ exports.userRouter.get('/dashboard/analytics/:eventId', user_1.userMiddleware, (
         const formattedRevenueTrend = Object.entries(revenueTrend)
             .map(([label, revenue]) => ({ label, revenue }))
             .sort((a, b) => new Date(a.label).getTime() - new Date(b.label).getTime());
+        // Comparison btw todays revenue and the yesterdays revenue
+        const todayLabel = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const yesterdayLabel = yesterday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const todayRevenue = revenueTrend[todayLabel] || 0;
+        const yesterdayRevenue = revenueTrend[yesterdayLabel] || 0;
+        const revenueDiff = todayRevenue - yesterdayRevenue;
+        const revenueChange = {
+            amount: revenueDiff,
+            percentage: yesterdayRevenue ? ((revenueDiff / yesterdayRevenue) * 100).toFixed(2) : "∞",
+            direction: revenueDiff > 0 ? "increase" : revenueDiff < 0 ? "decrease" : "no change",
+        };
         // Payment type distribution
         let creditCard_count = 0;
         let bankTransfer_count = 0;
@@ -1154,6 +1166,11 @@ exports.userRouter.get('/dashboard/analytics/:eventId', user_1.userMiddleware, (
             category: result.category,
             date: result.date,
             time_frame: result.time_frame,
+            vip_tickets_count: result.vip_tickets_count,
+            general_tickets_count: result.general_tickets_count,
+            todayLabel: todayLabel,
+            todayRevenue: todayRevenue,
+            revenueChange: revenueChange,
             metrics: {
                 totalRevenue,
                 totalTicketsSold,
