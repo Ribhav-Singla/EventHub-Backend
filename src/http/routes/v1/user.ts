@@ -4,7 +4,7 @@ import client from "../../../db/index";
 import bcrypt from 'bcrypt';
 import moment from "moment-timezone";
 import { LOCATION_TYPE, ORGANIZER_DETAILS_TYPE } from "../../types";
-import { categorizeAge } from "../../utils";
+import { categorizeAge, formatDateLabel, findNearestLabel, findNearestDate } from "../../utils";
 
 export const userRouter = express.Router();
 
@@ -751,6 +751,9 @@ userRouter.get('/transactions/bulk', userMiddleware, async (req, res) => {
 userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
     console.log('inside analytics');
 
+    const timePeriod = req.query.timePeriod || "7";
+    const daysToLookBack = Number(timePeriod);
+
     try {
         const result = await client.user.findUnique({
             where: {
@@ -774,6 +777,7 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
                                 ticket_details: {
                                     select: {
                                         ticket_category: true,
+                                        ticket_quantity: true,
                                         payment_type: true,
                                         attendees: {
                                             select: {
@@ -791,55 +795,134 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
 
         if (!result) {
             res.status(404).json({ message: "User not found" });
-            return
+            return;
         }
 
-        // Metrics
+        const today = new Date();
+        const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (daysToLookBack - 1));
+
+        // Filter events and transactions within the time period
+        const filteredEvents = result.events.map(event => ({
+            ...event,
+            transactions: event.transactions.filter(txn => {
+                const txnDate = new Date(txn.created_at);
+                return txnDate >= startDate && txnDate <= today;
+            })
+        }));
+
+        // Metrics for the selected time period
         let totalRevenue = 0;
         let totalTicketsSold = 0;
 
-        result.events.forEach(event => {
-            const eventTotalTicketsSold = (event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0);
-            totalTicketsSold += eventTotalTicketsSold;
-
+        filteredEvents.forEach(event => {
             event.transactions.forEach(txn => {
                 totalRevenue += txn.amount || 0;
+                // Add ticket quantity from ticket_details
+                if (txn.ticket_details && txn.ticket_details[0]) {
+                    totalTicketsSold += txn.ticket_details[0].ticket_quantity || 0;
+                }
             });
         });
 
         const avgTicketPrice = totalTicketsSold > 0 ? (totalRevenue / totalTicketsSold).toFixed(2) : "0.00";
 
-        // Revenue trend analysis
-        const revenueTrend: { [key: string]: number } = {};
-        const today = new Date();
-        const last7Days = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
-
-        // Initialize revenueTrend with 0 for the last 7 days
-        for (let i = 0; i < 7; i++) {
-            const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
-            const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            revenueTrend[label] = 0;
+        // Define interfaces for revenue trend data
+        interface RevenueTrendData {
+            [key: string]: number;
         }
 
-        result.events.forEach(event => {
+        interface FormattedRevenueTrend {
+            label: string;
+            revenue: number;
+        }
+
+        // Generate dates for the time period
+        let dates: Date[] = [];
+        for (let i = 0; i < daysToLookBack; i++) {
+            dates.push(new Date(today.getFullYear(), today.getMonth(), today.getDate() - i));
+        }
+
+        // Sort dates chronologically
+        dates.sort((a, b) => a.getTime() - b.getTime());
+
+        // Special handling for different time periods
+        if (daysToLookBack === 7) {
+            // For 7 days, keep chronological order
+            dates.sort((a, b) => a.getTime() - b.getTime());
+        } else if (daysToLookBack === 90) {
+            // For 90 days, show only 15 evenly spaced dates
+            const interval = Math.floor(dates.length / 15);
+            dates = dates.filter((_, index) => index % interval === 0);
+        } else if (daysToLookBack === 366) {
+            // For yearly view, get unique year-month combinations
+            const yearMonthSet = new Set<string>();
+
+            // Iterate through dates to collect unique year-month pairs
+            dates.forEach(date => {
+                const year = date.getFullYear();
+                const month = date.getMonth(); // 0-based index (0=January)
+                yearMonthSet.add(`${year}-${month}`);
+            });
+
+            // Convert the set to an array of {year, month} and create Date objects
+            dates = Array.from(yearMonthSet).map(key => {
+                const [year, month] = key.split('-').map(Number);
+                return new Date(year, month, 1); // Create date for the 1st of the month
+            });
+
+            // Sort in reverse chronological order (most recent first)
+            dates.sort((a, b) => b.getTime() - a.getTime());
+        }
+
+        // Initialize revenue trend with formatted dates
+        const revenueTrend: RevenueTrendData = {};
+        dates.forEach(date => {
+            const dateLabel = formatDateLabel(date, daysToLookBack);
+            revenueTrend[dateLabel] = 0;
+        });
+
+        // Calculate revenue for each date
+        filteredEvents.forEach(event => {
             event.transactions.forEach(txn => {
                 const txnDate = new Date(txn.created_at);
-                if (txnDate >= last7Days && txnDate <= today) {
-                    const label = txnDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                    revenueTrend[label] += txn.amount || 0;
+
+                if (daysToLookBack === 90) {
+                    // Find the nearest label date for 90-day view
+                    const nearestDate = findNearestDate(txnDate, dates);
+                    const dateLabel = formatDateLabel(nearestDate, daysToLookBack);
+                    revenueTrend[dateLabel] = (revenueTrend[dateLabel] || 0) + (txn.amount || 0);
+                } else if (daysToLookBack === 366) {
+                    // For yearly view, aggregate by month
+                    const monthLabel = formatDateLabel(txnDate, daysToLookBack);
+                    if (revenueTrend.hasOwnProperty(monthLabel)) {
+                        revenueTrend[monthLabel] += txn.amount || 0;
+                    }
+                } else {
+                    const dateLabel = formatDateLabel(txnDate, daysToLookBack);
+                    if (revenueTrend.hasOwnProperty(dateLabel)) {
+                        revenueTrend[dateLabel] += txn.amount || 0;
+                    }
                 }
             });
         });
 
         // Format Revenue Trend for frontend
-        const formattedRevenueTrend = Object.entries(revenueTrend)
-            .map(([label, revenue]) => ({ label, revenue }))
-            .sort((a, b) => new Date(a.label).getTime() - new Date(b.label).getTime());
+        const formattedRevenueTrend: FormattedRevenueTrend[] = Object.entries(revenueTrend)
+            .map(([label, revenue]) => ({ label, revenue }));
 
+        // No additional sorting needed as the dates array already has the correct order
+        // For yearly view (366 days), reverse the order of formattedRevenueTrend
+        if (daysToLookBack === 366) {
+            formattedRevenueTrend.reverse();
+        }
 
+        // Define interface for age distribution
+        interface AgeDistribution {
+            [key: string]: number;
+        }
 
-        // Attendee distribution analysis
-        let ageDistribution = {
+        // Attendee distribution analysis for the time period
+        let ageDistribution: AgeDistribution = {
             '<15 age': 0,
             '15-29 age': 0,
             '30-44 age': 0,
@@ -849,7 +932,7 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
             '90+ age': 0
         };
 
-        result.events.forEach(event => {
+        filteredEvents.forEach(event => {
             event.transactions.forEach(txn => {
                 txn.ticket_details[0].attendees.forEach(attendee => {
                     const category = categorizeAge(attendee.age);
@@ -858,23 +941,34 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
             });
         });
 
-        // Top 3 performing events
-        let topEvents = result.events.map(event => {
-            const eventTotalTicketsSold = (event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0);
-            const totalRevenue = event.transactions.reduce((sum, txn) => sum + txn.amount, 0);
-            const totalAvailableTickets = (event.vip_tickets_count || 0) + (event.general_tickets_count || 0);
-            const conversionRate = totalAvailableTickets > 0
-                ? ((eventTotalTicketsSold / totalAvailableTickets) * 100).toFixed(2) + "%"
-                : "N/A";
+        // Interface for top events
+        interface TopEvent {
+            title: string;
+            revenue: number;
+            ticketsSold: number;
+            conversionRate: string;
+            status: Date;
+        }
 
-            return {
-                title: event.title,
-                revenue: totalRevenue,
-                ticketsSold: eventTotalTicketsSold,
-                conversionRate,
-                status: event.date // Convert Date object to readable format
-            };
-        });
+        // Top 3 performing events within the time period
+        let topEvents: TopEvent[] = filteredEvents
+            .filter(event => event.transactions.length > 0)
+            .map(event => {
+                const eventTotalTicketsSold = (event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0);
+                const totalRevenue = event.transactions.reduce((sum, txn) => sum + txn.amount, 0);
+                const totalAvailableTickets = (event.vip_tickets_count || 0) + (event.general_tickets_count || 0);
+                const conversionRate = totalAvailableTickets > 0
+                    ? ((eventTotalTicketsSold / totalAvailableTickets) * 100).toFixed(2) + "%"
+                    : "N/A";
+
+                return {
+                    title: event.title,
+                    revenue: totalRevenue,
+                    ticketsSold: eventTotalTicketsSold,
+                    conversionRate,
+                    status: event.date
+                };
+            });
 
         // Sort by revenue in descending order and take the top 3
         topEvents = topEvents.sort((a, b) => b.revenue - a.revenue).slice(0, 3);
