@@ -720,7 +720,8 @@ userRouter.get('/transactions/bulk', userMiddleware, async (req, res) => {
                                 attendees: {
                                     select: {
                                         name: true,
-                                        age: true
+                                        age: true,
+                                        gender: true,
                                     }
                                 },
                                 payment_type: true,
@@ -1358,3 +1359,65 @@ userRouter.get('/dashboard/analytics/:eventId', userMiddleware, async (req, res)
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });
+
+userRouter.get('/dashboard/event/registrations/:eventId', userMiddleware, async (req, res) => {
+    console.log('inside registrations');
+    const eventId = req.params.eventId
+    const limit = 6;
+    const page = Number(req.query.page) || 1;
+    const skip = (page - 1) * limit;
+    try {
+        const registrations = await client.event.findFirst({
+            where: {
+                id: eventId,
+                creatorId : req.userId
+            },
+            select: {
+                id: true,
+                _count:{
+                    select:{
+                        transactions: true,
+                    }
+                },
+                transactions: {
+                    select: {
+                        user: {
+                            select: {
+                                email: true,
+                            }
+                        },
+                        created_at: true,
+                        ticket_details: {
+                            select: {
+                                ticket_category: true,
+                                ticket_quantity: true,
+                            }
+                        },
+                        amount: true,
+                    },
+                    skip: skip,
+                    take: limit,
+                    orderBy:{
+                        created_at: 'desc'
+                    }
+                }
+            }
+        })
+        const registrationsData = registrations ? registrations.transactions.map(registration => {
+            return {
+                email: registration.user.email,
+                created_at: registration.created_at,
+                ticket_category: registration.ticket_details[0].ticket_category,
+                ticket_quantity: registration.ticket_details[0].ticket_quantity,
+                amount: registration.amount
+            }
+        }) : []
+        res.json({
+            registrationsData: registrationsData,
+            totalRegistrations: registrations ? registrations._count.transactions : 0
+        })
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+})

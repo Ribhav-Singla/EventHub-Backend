@@ -696,7 +696,8 @@ exports.userRouter.get('/transactions/bulk', user_1.userMiddleware, (req, res) =
                                 attendees: {
                                     select: {
                                         name: true,
-                                        age: true
+                                        age: true,
+                                        gender: true,
                                     }
                                 },
                                 payment_type: true,
@@ -1245,6 +1246,68 @@ exports.userRouter.get('/dashboard/analytics/:eventId', user_1.userMiddleware, (
             ticketsTypeSoldChart,
             revenueTrendChart: formattedRevenueTrend,
             paymentTypeChart
+        });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}));
+exports.userRouter.get('/dashboard/event/registrations/:eventId', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('inside registrations');
+    const eventId = req.params.eventId;
+    const limit = 6;
+    const page = Number(req.query.page) || 1;
+    const skip = (page - 1) * limit;
+    try {
+        const registrations = yield index_1.default.event.findFirst({
+            where: {
+                id: eventId,
+                creatorId: req.userId
+            },
+            select: {
+                id: true,
+                _count: {
+                    select: {
+                        transactions: true,
+                    }
+                },
+                transactions: {
+                    select: {
+                        user: {
+                            select: {
+                                email: true,
+                            }
+                        },
+                        created_at: true,
+                        ticket_details: {
+                            select: {
+                                ticket_category: true,
+                                ticket_quantity: true,
+                            }
+                        },
+                        amount: true,
+                    },
+                    skip: skip,
+                    take: limit,
+                    orderBy: {
+                        created_at: 'desc'
+                    }
+                }
+            }
+        });
+        const registrationsData = registrations ? registrations.transactions.map(registration => {
+            return {
+                email: registration.user.email,
+                created_at: registration.created_at,
+                ticket_category: registration.ticket_details[0].ticket_category,
+                ticket_quantity: registration.ticket_details[0].ticket_quantity,
+                amount: registration.amount
+            };
+        }) : [];
+        res.json({
+            registrationsData: registrationsData,
+            totalRegistrations: registrations ? registrations._count.transactions : 0
         });
     }
     catch (error) {
