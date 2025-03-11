@@ -24,7 +24,16 @@ const event_1 = require("./event");
 const user_2 = require("./user");
 const googleConfig_1 = require("../../googleConfig");
 const googleapis_1 = require("googleapis");
+const nodemailer_1 = __importDefault(require("nodemailer"));
+const node_cron_1 = __importDefault(require("node-cron"));
 exports.router = express_1.default.Router();
+const transporter = nodemailer_1.default.createTransport({
+    service: 'Gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+});
 exports.router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     res.send('Healthy Server');
 }));
@@ -209,6 +218,101 @@ exports.router.post('/me', user_1.userMiddleware, (req, res) => __awaiter(void 0
         res.status(500).json({ message: "Internal server error" });
     }
 }));
+exports.router.post('/newsletter', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { email } = req.body;
+    try {
+        const user = yield index_1.default.user.update({
+            where: {
+                email: email
+            },
+            data: {
+                newsletter_subscription: true,
+            }
+        });
+        if (!user) {
+            res.status(400).json({ message: "User not found" });
+        }
+        res.json({ message: "Newsletter subscription successful" });
+    }
+    catch (error) {
+        res.status(500).json({ message: "Internal server error" });
+    }
+}));
+function sendNewsletter() {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            // Fetch users who have subscribed to the newsletter
+            const subscribers = yield index_1.default.user.findMany({
+                where: { newsletter_subscription: true },
+                select: { id: true, email: true, firstname: true },
+            });
+            // Fetch new events created in the last 24 hours
+            const newEvents = yield index_1.default.event.findMany({
+                where: {
+                    created_at: {
+                        gte: new Date(Date.now() - 24 * 60 * 60 * 1000), // Events from the last 24 hours
+                    },
+                },
+                select: {
+                    id: true,
+                    title: true,
+                    description: true,
+                    date: true,
+                    location: {
+                        select: {
+                            venue: true,
+                            city: true,
+                            country: true,
+                        },
+                    },
+                },
+            });
+            if (newEvents.length === 0) {
+                console.log('No new events to share.');
+                return;
+            }
+            // Prepare and send emails
+            for (const subscriber of subscribers) {
+                const eventDetails = newEvents
+                    .map((event) => {
+                    const { venue, city, country } = event.location[0];
+                    return `
+              <h3>${event.title}</h3>
+              <p>${event.description}</p>
+              <p>Date: ${event.date.toDateString()}</p>
+              <p>Location: ${venue}, ${city}, ${country}</p>
+              <hr/>
+            `;
+                })
+                    .join('');
+                const mailOptions = {
+                    from: '"Event Updates" <no-reply@example.com>',
+                    to: subscriber.email,
+                    subject: '📅 New Events You Might Like!',
+                    html: `
+            <p>Hello ${subscriber.firstname},</p>
+            <p>Here are the latest events:</p>
+            ${eventDetails}
+            <p>Stay tuned for more updates!</p>
+          `,
+                };
+                yield transporter.sendMail(mailOptions);
+                console.log(`Newsletter sent to ${subscriber.email}`);
+            }
+        }
+        catch (error) {
+            console.error('Error sending newsletters:', error);
+        }
+        finally {
+            yield index_1.default.$disconnect();
+        }
+    });
+}
+// Schedule task to run once a day at 9:00 AM
+node_cron_1.default.schedule('0 9 * * *', () => {
+    console.log('📅 Sending daily newsletter...');
+    sendNewsletter();
+});
 exports.router.use('/upload_images', upload_1.imageRouter);
 exports.router.use('/event', event_1.eventRouter);
 exports.router.use('/user', user_2.userRouter);
