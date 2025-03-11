@@ -576,7 +576,7 @@ exports.userRouter.get('/ticket/:transactionId', user_1.userMiddleware, (req, re
     }
 }));
 exports.userRouter.get('/transactions/bulk', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b;
     console.log('inside bulk transactions');
     const limit = 6;
     const page = Number(req.query.page) || 1;
@@ -662,11 +662,13 @@ exports.userRouter.get('/transactions/bulk', user_1.userMiddleware, (req, res) =
             select: {
                 _count: {
                     select: {
-                        transactions: true,
+                        transactions: {
+                            where: ((_a = filters.transactions) === null || _a === void 0 ? void 0 : _a.some) || {}
+                        },
                     },
                 },
                 transactions: {
-                    where: ((_a = filters.transactions) === null || _a === void 0 ? void 0 : _a.some) || {},
+                    where: ((_b = filters.transactions) === null || _b === void 0 ? void 0 : _b.some) || {},
                     select: {
                         id: true,
                         eventId: true,

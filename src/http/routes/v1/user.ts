@@ -686,7 +686,9 @@ userRouter.get('/transactions/bulk', userMiddleware, async (req, res) => {
             select: {
                 _count: {
                     select: {
-                        transactions: true,
+                        transactions: {
+                            where: filters.transactions?.some || {}
+                        },
                     },
                 },
                 transactions: {
@@ -737,7 +739,7 @@ userRouter.get('/transactions/bulk', userMiddleware, async (req, res) => {
             }
         })
 
-        const total_transactions = transactions?._count.transactions || 0;
+        const total_transactions = transactions?._count.transactions || 0;        
         res.json({
             total_transactions,
             transactions: transactions?.transactions

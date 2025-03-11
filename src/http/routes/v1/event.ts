@@ -11,7 +11,12 @@ eventRouter.get("/", async (req, res) => {
     const skip = (page - 1) * limit;
 
     try {
-        const filters: any = {};
+        const filters: any = {
+            isDeleted: false,
+            date: {
+                gte: new Date() 
+            }
+        };
 
         // Title Filter (Case-insensitive search)
         if (typeof req.query.title === "string" && req.query.title.trim() !== "") {
