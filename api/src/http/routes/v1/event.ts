@@ -110,7 +110,19 @@ eventRouter.get("/", async (req, res) => {
         });
 
         // Return only the first image per event
-        const events = fetched_events.map((event) => ({
+        const events = fetched_events.map((event: {
+            location: {
+                venue: string;
+                city: string;
+                country: string;
+            }[];
+            id: string;
+            title: string;
+            description: string;
+            general_ticket_price: number;
+            date: Date;
+            images: string[];
+        }) => ({
             ...event,
             images: event.images.length > 0 ? [event.images[0]] : [],
         }));
@@ -158,7 +170,7 @@ eventRouter.get("/upcoming", async (req, res) => {
             take: limit,
         });
 
-        const events = fetched_events.map((event) => ({
+        const events = fetched_events.map((event:any) => ({
             ...event,
             images: event.images.slice(0, 1) || [],
         }));

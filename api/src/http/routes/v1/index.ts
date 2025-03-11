@@ -283,7 +283,17 @@ async function sendNewsletter() {
         // Prepare and send emails
         for (const subscriber of subscribers) {
             const eventDetails = newEvents
-                .map((event) => {
+                .map((event: {
+                    location: {
+                        venue: string;
+                        city: string;
+                        country: string;
+                    }[];
+                    id: string;
+                    title: string;
+                    description: string;
+                    date: Date;
+                }) => {
                     const { venue, city, country } = event.location[0];
                     return `
               <h3>${event.title}</h3>

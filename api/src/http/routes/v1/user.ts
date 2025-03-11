@@ -454,7 +454,7 @@ userRouter.post('/ticket/transaction/:eventId', userMiddleware, async (req, res)
     const eventId = req.params.eventId;
 
     try {
-        const transactionData = await client.$transaction(async (client) => {
+        const transactionData = await client.$transaction(async (client:any) => {
             const event = await client.event.findUnique({
                 where: { id: eventId },
             });
@@ -805,9 +805,9 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
         const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (daysToLookBack - 1));
 
         // Filter events and transactions within the time period
-        const filteredEvents = result.events.map(event => ({
+        const filteredEvents = result.events.map((event:any) => ({
             ...event,
-            transactions: event.transactions.filter(txn => {
+            transactions: event.transactions.filter((txn:any) => {
                 const txnDate = new Date(txn.created_at);
                 return txnDate >= startDate && txnDate <= today;
             })
@@ -817,8 +817,8 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
         let totalRevenue = 0;
         let totalTicketsSold = 0;
 
-        filteredEvents.forEach(event => {
-            event.transactions.forEach(txn => {
+        filteredEvents.forEach((event:any) => {
+            event.transactions.forEach((txn:any) => {
                 totalRevenue += txn.amount || 0;
                 // Add ticket quantity from ticket_details
                 if (txn.ticket_details && txn.ticket_details[0]) {
@@ -885,8 +885,8 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
         });
 
         // Calculate revenue for each date
-        filteredEvents.forEach(event => {
-            event.transactions.forEach(txn => {
+        filteredEvents.forEach((event:any) => {
+            event.transactions.forEach((txn:any) => {
                 const txnDate = new Date(txn.created_at);
 
                 if (daysToLookBack === 90) {
@@ -935,9 +935,9 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
             '90+ age': 0
         };
 
-        filteredEvents.forEach(event => {
-            event.transactions.forEach(txn => {
-                txn.ticket_details[0].attendees.forEach(attendee => {
+        filteredEvents.forEach((event:any) => {
+            event.transactions.forEach((txn:any) => {
+                txn.ticket_details[0].attendees.forEach((attendee:any) => {
                     const category = categorizeAge(attendee.age);
                     ageDistribution[category]++;
                 });
@@ -955,10 +955,10 @@ userRouter.get('/dashboard/analytics', userMiddleware, async (req, res) => {
 
         // Top 3 performing events within the time period
         let topEvents: TopEvent[] = filteredEvents
-            .filter(event => event.transactions.length > 0)
-            .map(event => {
+            .filter((event:any) => event.transactions.length > 0)
+            .map((event:any) => {
                 const eventTotalTicketsSold = (event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0);
-                const totalRevenue = event.transactions.reduce((sum, txn) => sum + txn.amount, 0);
+                const totalRevenue = event.transactions.reduce((sum:any, txn:any) => sum + txn.amount, 0);
                 const totalAvailableTickets = (event.vip_tickets_count || 0) + (event.general_tickets_count || 0);
                 const conversionRate = totalAvailableTickets > 0
                     ? ((eventTotalTicketsSold / totalAvailableTickets) * 100).toFixed(2) + "%"
@@ -1030,16 +1030,16 @@ userRouter.get('/dashboard/overview', userMiddleware, async (req, res) => {
 
         // Metrics
         const totalEvents = result.events.length;
-        const totalRevenue = result.events.reduce((sum, event) => {
-            const eventRevenue = event.transactions.reduce((revenueSum, tx) => revenueSum + (tx.amount || 0), 0);
+        const totalRevenue = result.events.reduce((sum:any, event:any) => {
+            const eventRevenue = event.transactions.reduce((revenueSum:any, tx:any) => revenueSum + (tx.amount || 0), 0);
             return sum + eventRevenue;
         }, 0);
 
-        const totalTicketsSold = result.events.reduce((sum, event) =>
+        const totalTicketsSold = result.events.reduce((sum:any, event:any) =>
             sum + ((event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0)),
             0);
 
-        const totalTickets = result.events.reduce((sum, event) =>
+        const totalTickets = result.events.reduce((sum:any, event:any) =>
             sum + ((event.vip_tickets_count || 0) + (event.general_tickets_count || 0)),
             0);
 
@@ -1092,7 +1092,7 @@ userRouter.get('/dashboard/overview', userMiddleware, async (req, res) => {
             }
         });
 
-        const upcomingEvents = fetched_events ? fetched_events.events.map(event => ({
+        const upcomingEvents = fetched_events ? fetched_events.events.map((event:any) => ({
             title: event.title,
             date: event.date, // Keeping this as is
             location: `${event.location[0]?.venue}, ${event.location[0]?.city}, ${event.location[0]?.country}`,
@@ -1211,7 +1211,7 @@ userRouter.get('/dashboard/analytics/:eventId', userMiddleware, async (req, res)
 
         // Compute total revenue
         let totalRevenue = 0;
-        result.transactions.forEach(transaction => {
+        result.transactions.forEach((transaction:any) => {
             totalRevenue += transaction.amount;
         });
 
@@ -1219,8 +1219,8 @@ userRouter.get('/dashboard/analytics/:eventId', userMiddleware, async (req, res)
         let totalTicketsSold = 0;
         let vipTicketsSold = 0;
         let generalTicketsSold = 0;
-        result.transactions.forEach(transaction => {
-            transaction.ticket_details.forEach(ticket => {
+        result.transactions.forEach((transaction:any) => {
+            transaction.ticket_details.forEach((ticket:any) => {
                 totalTicketsSold += ticket.ticket_quantity;
                 if (ticket.ticket_category === 'VIP Access') {
                     vipTicketsSold += ticket.ticket_quantity;
@@ -1234,9 +1234,9 @@ userRouter.get('/dashboard/analytics/:eventId', userMiddleware, async (req, res)
         let maleAttendees = 0;
         let femaleAttendees = 0;
 
-        result.transactions.forEach(transaction => {
-            transaction.ticket_details.forEach(ticket => {
-                ticket.attendees.forEach(attendee => {
+        result.transactions.forEach((transaction:any) => {
+            transaction.ticket_details.forEach((ticket:any) => {
+                ticket.attendees.forEach((attendee:any) => {
                     if (attendee.gender === 'Male') {
                         maleAttendees++;
                     } else {
@@ -1249,8 +1249,8 @@ userRouter.get('/dashboard/analytics/:eventId', userMiddleware, async (req, res)
         // Compute average ticket price
         let totalTicketRevenue = 0;
         let totalTickets = 0;
-        result.transactions.forEach(transaction => {
-            transaction.ticket_details.forEach(ticket => {
+        result.transactions.forEach((transaction:any) => {
+            transaction.ticket_details.forEach((ticket:any) => {
                 totalTicketRevenue += ticket.ticket_price * ticket.ticket_quantity;
                 totalTickets += ticket.ticket_quantity;
             });
@@ -1279,7 +1279,7 @@ userRouter.get('/dashboard/analytics/:eventId', userMiddleware, async (req, res)
         }
 
         // Iterate through transactions to populate revenueTrend
-        result.transactions.forEach(transaction => {
+        result.transactions.forEach((transaction:any) => {
             const txnDate = new Date(transaction.created_at);
             if (txnDate >= last7Days && txnDate <= today) {
                 const label = txnDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -1311,8 +1311,8 @@ userRouter.get('/dashboard/analytics/:eventId', userMiddleware, async (req, res)
         let free_count = 0;
 
         // Iterate through transactions to populate payment type distribution
-        result.transactions.forEach(transaction => {
-            transaction.ticket_details.forEach(ticket => {
+        result.transactions.forEach((transaction:any) => {
+            transaction.ticket_details.forEach((ticket:any) => {
                 if (ticket.payment_type == "Bank Transfer") {
                     bankTransfer_count++;
                 } else if (ticket.payment_type == "Digital Wallet") {
@@ -1405,7 +1405,7 @@ userRouter.get('/dashboard/event/registrations/:eventId', userMiddleware, async 
                 }
             }
         })
-        const registrationsData = registrations ? registrations.transactions.map(registration => {
+        const registrationsData = registrations ? registrations.transactions.map((registration:any) => {
             return {
                 email: registration.user.email,
                 created_at: registration.created_at,
