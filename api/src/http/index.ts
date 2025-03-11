@@ -15,6 +15,10 @@ app.use(cors(corsOptions))
 app.use(express.json())
 app.use(express.static('uploads/'))
 
+app.get('/',async(req,res)=>{
+    res.send('Server is running')
+})
+
 app.use('/api/v1', router)
 
 app.listen(PORT, () => {
