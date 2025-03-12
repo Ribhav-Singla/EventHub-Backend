@@ -775,15 +775,15 @@ exports.userRouter.get('/dashboard/analytics', user_1.userMiddleware, (req, res)
         const today = new Date();
         const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (daysToLookBack - 1));
         // Filter events and transactions within the time period
-        const filteredEvents = result.events.map(event => (Object.assign(Object.assign({}, event), { transactions: event.transactions.filter(txn => {
+        const filteredEvents = result.events.map((event) => (Object.assign(Object.assign({}, event), { transactions: event.transactions.filter((txn) => {
                 const txnDate = new Date(txn.created_at);
                 return txnDate >= startDate && txnDate <= today;
             }) })));
         // Metrics for the selected time period
         let totalRevenue = 0;
         let totalTicketsSold = 0;
-        filteredEvents.forEach(event => {
-            event.transactions.forEach(txn => {
+        filteredEvents.forEach((event) => {
+            event.transactions.forEach((txn) => {
                 totalRevenue += txn.amount || 0;
                 // Add ticket quantity from ticket_details
                 if (txn.ticket_details && txn.ticket_details[0]) {
@@ -833,8 +833,8 @@ exports.userRouter.get('/dashboard/analytics', user_1.userMiddleware, (req, res)
             revenueTrend[dateLabel] = 0;
         });
         // Calculate revenue for each date
-        filteredEvents.forEach(event => {
-            event.transactions.forEach(txn => {
+        filteredEvents.forEach((event) => {
+            event.transactions.forEach((txn) => {
                 const txnDate = new Date(txn.created_at);
                 if (daysToLookBack === 90) {
                     // Find the nearest label date for 90-day view
@@ -875,9 +875,9 @@ exports.userRouter.get('/dashboard/analytics', user_1.userMiddleware, (req, res)
             '75-89 age': 0,
             '90+ age': 0
         };
-        filteredEvents.forEach(event => {
-            event.transactions.forEach(txn => {
-                txn.ticket_details[0].attendees.forEach(attendee => {
+        filteredEvents.forEach((event) => {
+            event.transactions.forEach((txn) => {
+                txn.ticket_details[0].attendees.forEach((attendee) => {
                     const category = (0, utils_1.categorizeAge)(attendee.age);
                     ageDistribution[category]++;
                 });
@@ -885,8 +885,8 @@ exports.userRouter.get('/dashboard/analytics', user_1.userMiddleware, (req, res)
         });
         // Top 3 performing events within the time period
         let topEvents = filteredEvents
-            .filter(event => event.transactions.length > 0)
-            .map(event => {
+            .filter((event) => event.transactions.length > 0)
+            .map((event) => {
             const eventTotalTicketsSold = (event.vip_tickets_sold || 0) + (event.general_tickets_sold || 0);
             const totalRevenue = event.transactions.reduce((sum, txn) => sum + txn.amount, 0);
             const totalAvailableTickets = (event.vip_tickets_count || 0) + (event.general_tickets_count || 0);
@@ -1004,7 +1004,7 @@ exports.userRouter.get('/dashboard/overview', user_1.userMiddleware, (req, res) 
                 }
             }
         });
-        const upcomingEvents = fetched_events ? fetched_events.events.map(event => {
+        const upcomingEvents = fetched_events ? fetched_events.events.map((event) => {
             var _a, _b, _c;
             return ({
                 title: event.title,
@@ -1119,15 +1119,15 @@ exports.userRouter.get('/dashboard/analytics/:eventId', user_1.userMiddleware, (
         }
         // Compute total revenue
         let totalRevenue = 0;
-        result.transactions.forEach(transaction => {
+        result.transactions.forEach((transaction) => {
             totalRevenue += transaction.amount;
         });
         // Compute total tickets sold
         let totalTicketsSold = 0;
         let vipTicketsSold = 0;
         let generalTicketsSold = 0;
-        result.transactions.forEach(transaction => {
-            transaction.ticket_details.forEach(ticket => {
+        result.transactions.forEach((transaction) => {
+            transaction.ticket_details.forEach((ticket) => {
                 totalTicketsSold += ticket.ticket_quantity;
                 if (ticket.ticket_category === 'VIP Access') {
                     vipTicketsSold += ticket.ticket_quantity;
@@ -1140,9 +1140,9 @@ exports.userRouter.get('/dashboard/analytics/:eventId', user_1.userMiddleware, (
         // Compute gender breakdown
         let maleAttendees = 0;
         let femaleAttendees = 0;
-        result.transactions.forEach(transaction => {
-            transaction.ticket_details.forEach(ticket => {
-                ticket.attendees.forEach(attendee => {
+        result.transactions.forEach((transaction) => {
+            transaction.ticket_details.forEach((ticket) => {
+                ticket.attendees.forEach((attendee) => {
                     if (attendee.gender === 'Male') {
                         maleAttendees++;
                     }
@@ -1155,8 +1155,8 @@ exports.userRouter.get('/dashboard/analytics/:eventId', user_1.userMiddleware, (
         // Compute average ticket price
         let totalTicketRevenue = 0;
         let totalTickets = 0;
-        result.transactions.forEach(transaction => {
-            transaction.ticket_details.forEach(ticket => {
+        result.transactions.forEach((transaction) => {
+            transaction.ticket_details.forEach((ticket) => {
                 totalTicketRevenue += ticket.ticket_price * ticket.ticket_quantity;
                 totalTickets += ticket.ticket_quantity;
             });
@@ -1178,7 +1178,7 @@ exports.userRouter.get('/dashboard/analytics/:eventId', user_1.userMiddleware, (
             revenueTrend[label] = 0;
         }
         // Iterate through transactions to populate revenueTrend
-        result.transactions.forEach(transaction => {
+        result.transactions.forEach((transaction) => {
             const txnDate = new Date(transaction.created_at);
             if (txnDate >= last7Days && txnDate <= today) {
                 const label = txnDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -1206,8 +1206,8 @@ exports.userRouter.get('/dashboard/analytics/:eventId', user_1.userMiddleware, (
         let digitalWallet_count = 0;
         let free_count = 0;
         // Iterate through transactions to populate payment type distribution
-        result.transactions.forEach(transaction => {
-            transaction.ticket_details.forEach(ticket => {
+        result.transactions.forEach((transaction) => {
+            transaction.ticket_details.forEach((ticket) => {
                 if (ticket.payment_type == "Bank Transfer") {
                     bankTransfer_count++;
                 }
@@ -1298,7 +1298,7 @@ exports.userRouter.get('/dashboard/event/registrations/:eventId', user_1.userMid
                 }
             }
         });
-        const registrationsData = registrations ? registrations.transactions.map(registration => {
+        const registrationsData = registrations ? registrations.transactions.map((registration) => {
             return {
                 email: registration.user.email,
                 created_at: registration.created_at,
