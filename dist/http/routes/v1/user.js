@@ -119,11 +119,21 @@ exports.userRouter.get("/wishlist", user_1.userMiddleware, (req, res) => __await
 }));
 exports.userRouter.post("/event/publish", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("inside publish event");
+    console.log(req.body);
     if (!req.userId) {
         res.status(401).json({ message: "Unauthorized" });
         return;
     }
     try {
+        const organizer_user = yield index_1.default.user.findUnique({
+            where: {
+                email: req.body.organizer_details[0].email
+            }
+        });
+        if (!organizer_user) {
+            res.status(404).json({ message: "Organizer not found" });
+            return;
+        }
         const isoDate = new Date(`${req.body.date}T${req.body.time_frame[0].time}Z`);
         const event = yield index_1.default.event.create({
             data: {
@@ -142,17 +152,19 @@ exports.userRouter.post("/event/publish", user_1.userMiddleware, (req, res) => _
                 images: req.body.images,
                 creatorId: req.userId,
                 location: {
-                    create: req.body.location.map((loc) => ({
-                        venue: loc.venue,
-                        city: loc.city,
-                        country: loc.country,
-                    })),
+                    create: [
+                        {
+                            venue: req.body.location[0].venue,
+                            city: req.body.location[0].city,
+                            country: req.body.location[0].country,
+                        },
+                    ]
                 },
                 organizer_details: {
-                    create: req.body.organizer_details.map((organizer) => ({
-                        phone: organizer.phone,
-                        email: organizer.email,
-                    })),
+                    create: [{
+                            phone: req.body.organizer_details[0].phone,
+                            userId: organizer_user.id
+                        }]
                 },
             },
         });
@@ -264,7 +276,11 @@ exports.userRouter.get('/:eventId', (req, res) => __awaiter(void 0, void 0, void
                 organizer_details: {
                     select: {
                         phone: true,
-                        email: true,
+                        user: {
+                            select: {
+                                email: true
+                            }
+                        }
                     }
                 }
             }
@@ -280,6 +296,15 @@ exports.userRouter.put('/:eventId', user_1.userMiddleware, (req, res) => __await
     console.log('Inside update');
     const eventId = req.params.eventId;
     try {
+        const organizer_user = yield index_1.default.user.findFirst({
+            where: {
+                email: req.body.organizer_details[0].email
+            }
+        });
+        if (!organizer_user) {
+            res.status(404).json({ message: "Organizer not found" });
+            return;
+        }
         let isoDate;
         if (/^\d{4}-\d{2}-\d{2}$/.test(req.body.date)) {
             isoDate = new Date(`${req.body.date}T${req.body.time_frame[0].time}Z`);
@@ -325,7 +350,7 @@ exports.userRouter.put('/:eventId', user_1.userMiddleware, (req, res) => __await
                         },
                         data: {
                             phone: req.body.organizer_details[0].phone,
-                            email: req.body.organizer_details[0].email
+                            userId: organizer_user.id
                         }
                     }
                 },
@@ -341,10 +366,13 @@ exports.userRouter.put('/:eventId', user_1.userMiddleware, (req, res) => __await
 exports.userRouter.delete('/:eventId', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const eventId = req.params.eventId;
     try {
-        const event = yield index_1.default.event.delete({
+        const event = yield index_1.default.event.update({
             where: {
                 id: eventId,
                 creatorId: req.userId
+            },
+            data: {
+                isDeleted: true
             }
         });
         res.json({ eventId: event.id });

@@ -11,6 +11,7 @@ import { oauth2client } from '../../googleConfig'
 import { google } from 'googleapis';
 import nodemailer from 'nodemailer'
 import cron from 'node-cron';
+import { chatRouter } from './chat'
 
 export const router = express.Router()
 
@@ -336,3 +337,4 @@ cron.schedule('0 9 * * *', () => {
 router.use('/upload_images', imageRouter)
 router.use('/event', eventRouter)
 router.use('/user', userRouter)
+router.use('/chat', chatRouter)

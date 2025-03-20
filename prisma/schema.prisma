@@ -27,6 +27,11 @@ model User {
   events                  Event[]
   transactions            Transaction[]
   wishlist                Wishlist[]
+  organizer               Organizer[]
+  chatsInitiated          Chat[]        @relation(name: "UserChats")
+  chatsReceived           Chat[]        @relation(name: "OrganizerChats")
+  sentMessages            Message[]     @relation(name: "SentMessages")
+  receivedMessages        Message[]     @relation(name: "ReceivedMessages")
   created_at              DateTime      @default(now())
   updated_at              DateTime      @updatedAt
 }
@@ -69,7 +74,8 @@ model Location {
 model Organizer {
   id      String @id @default(cuid())
   phone   String
-  email   String
+  userId  String
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   eventId String @unique
   event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
@@ -112,4 +118,28 @@ model Wishlist {
   eventId String?
   event   Event?   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   addedAt DateTime @default(now())
+}
+
+model Chat {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(name: "UserChats", fields: [userId], references: [id], onDelete: Cascade)
+  organizerId String
+  organizer   User      @relation(name: "OrganizerChats", fields: [organizerId], references: [id], onDelete: Cascade)
+  messages    Message[]
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  chatId     String
+  chat       Chat     @relation(fields: [chatId], references: [id])
+  sender     User     @relation(fields: [senderId], references: [id], name: "SentMessages")
+  receiverId String
+  receiver   User     @relation(fields: [receiverId], references: [id], name: "ReceivedMessages")
+  text       String
+  seen       Boolean
+  createdAt  DateTime @default(now())
 }

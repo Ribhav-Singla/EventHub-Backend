@@ -190,7 +190,12 @@ exports.eventRouter.get("/:eventId", (req, res) => __awaiter(void 0, void 0, voi
                 organizer_details: {
                     select: {
                         phone: true,
-                        email: true,
+                        user: {
+                            select: {
+                                id: true,
+                                email: true
+                            }
+                        }
                     },
                 },
                 wishlist: {

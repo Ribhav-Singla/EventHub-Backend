@@ -26,6 +26,7 @@ const googleConfig_1 = require("../../googleConfig");
 const googleapis_1 = require("googleapis");
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const node_cron_1 = __importDefault(require("node-cron"));
+const chat_1 = require("./chat");
 exports.router = express_1.default.Router();
 const transporter = nodemailer_1.default.createTransport({
     service: 'Gmail',
@@ -316,3 +317,4 @@ node_cron_1.default.schedule('0 9 * * *', () => {
 exports.router.use('/upload_images', upload_1.imageRouter);
 exports.router.use('/event', event_1.eventRouter);
 exports.router.use('/user', user_2.userRouter);
+exports.router.use('/chat', chat_1.chatRouter);

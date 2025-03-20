@@ -213,7 +213,12 @@ eventRouter.get("/:eventId", async (req, res) => {
                 organizer_details: {
                     select: {
                         phone: true,
-                        email: true,
+                        user:{
+                            select:{
+                                id: true,
+                                email: true
+                            }
+                        }
                     },
                 },
                 wishlist: {
