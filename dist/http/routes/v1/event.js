@@ -146,6 +146,7 @@ exports.eventRouter.get("/upcoming", (req, res) => __awaiter(void 0, void 0, voi
                 date: {
                     gte: currentDateTimeIST,
                 },
+                isDeleted: false
             },
             orderBy: [{ date: "asc" }],
             take: limit,

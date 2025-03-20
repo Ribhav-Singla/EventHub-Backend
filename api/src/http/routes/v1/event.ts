@@ -165,6 +165,7 @@ eventRouter.get("/upcoming", async (req, res) => {
                 date: {
                     gte: currentDateTimeIST,
                 },
+                isDeleted: false
             },
             orderBy: [{ date: "asc" }],
             take: limit,

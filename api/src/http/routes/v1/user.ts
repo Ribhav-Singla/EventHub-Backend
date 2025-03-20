@@ -300,13 +300,12 @@ userRouter.get('/:eventId', async (req, res) => {
 
 userRouter.put('/:eventId', userMiddleware, async (req, res) => {
     console.log('Inside update');
-    const eventId = req.params.eventId;
-
+    const eventId = req.params.eventId;    
     try {
 
         const organizer_user = await client.user.findFirst({
             where: {
-                email: req.body.organizer_details[0].email
+                email: req.body.organizer_details[0].user.email
             }
         })
         if (!organizer_user) {
