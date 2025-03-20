@@ -123,7 +123,7 @@ userRouter.post("/event/publish", userMiddleware, async (req, res) => {
 
     try {
 
-        const organizer_user = await client.user.findUnique({
+        const organizer_user = await client.user.findFirst({
             where: {
                 email: req.body.organizer_details[0].email
             }
