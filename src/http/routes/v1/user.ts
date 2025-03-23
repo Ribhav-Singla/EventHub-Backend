@@ -114,8 +114,6 @@ userRouter.get("/wishlist", userMiddleware, async (req, res) => {
 
 userRouter.post("/event/publish", userMiddleware, async (req, res) => {
     console.log("inside publish event");
-    console.log(req.body);
-    
 
     if (!req.userId) {
         res.status(401).json({ message: "Unauthorized" });

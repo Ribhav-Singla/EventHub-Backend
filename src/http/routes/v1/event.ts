@@ -5,7 +5,6 @@ import moment from "moment-timezone";
 export const eventRouter = express.Router();
 
 eventRouter.get("/", async (req, res) => {
-    console.log(req.query);
     const limit = 9;
     const page = Number(req.query.page) || 1;
     const skip = (page - 1) * limit;
@@ -78,9 +77,6 @@ eventRouter.get("/", async (req, res) => {
                 filters.date.lte = new Date(`${req.query.end_date}T23:59:59Z`);
             }
         }
-
-
-        console.log("Generated Filters:", filters); // Debugging
 
         // Fetch events with filters
         const fetched_events = await client.event.findMany({
