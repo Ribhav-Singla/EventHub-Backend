@@ -50,6 +50,7 @@ userRouter.get("/wishlist", userMiddleware, async (req, res) => {
     try {
         let filter: any = {
             userId: req.userId,
+            isDeleted: false
         };
 
         if (category !== "all") {
@@ -187,7 +188,8 @@ userRouter.get("/events", userMiddleware, async (req, res) => {
     try {
 
         const filter: any = {
-            creatorId: req.userId
+            creatorId: req.userId,
+            isDeleted: false
         }
         if (category !== "all") {
             filter.category = category
@@ -254,7 +256,8 @@ userRouter.get('/:eventId', async (req, res) => {
         const event = await client.event.findUnique({
             where: {
                 id: eventId,
-                creatorId: req.userId
+                creatorId: req.userId,
+                isDeleted: false
             },
             select: {
                 id: true,

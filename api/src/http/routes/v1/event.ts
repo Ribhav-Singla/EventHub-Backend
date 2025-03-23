@@ -188,6 +188,7 @@ eventRouter.get("/:eventId", async (req, res) => {
         const event = await client.event.findUnique({
             where: {
                 id: eventId,
+                isDeleted: false
             },
             select: {
                 id: true,

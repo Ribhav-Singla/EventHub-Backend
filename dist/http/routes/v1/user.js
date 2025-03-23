@@ -62,6 +62,7 @@ exports.userRouter.get("/wishlist", user_1.userMiddleware, (req, res) => __await
     try {
         let filter = {
             userId: req.userId,
+            isDeleted: false
         };
         if (category !== "all") {
             filter.event = { category };
@@ -184,7 +185,8 @@ exports.userRouter.get("/events", user_1.userMiddleware, (req, res) => __awaiter
     const skip = (page - 1) * limit;
     try {
         const filter = {
-            creatorId: req.userId
+            creatorId: req.userId,
+            isDeleted: false
         };
         if (category !== "all") {
             filter.category = category;
@@ -249,7 +251,8 @@ exports.userRouter.get('/:eventId', (req, res) => __awaiter(void 0, void 0, void
         const event = yield index_1.default.event.findUnique({
             where: {
                 id: eventId,
-                creatorId: req.userId
+                creatorId: req.userId,
+                isDeleted: false
             },
             select: {
                 id: true,

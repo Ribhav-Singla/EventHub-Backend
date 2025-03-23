@@ -22,11 +22,20 @@ exports.chatRouter = express_1.default.Router();
 exports.chatRouter.post('/:organizerId', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('inside startChat');
     const userId = req.userId;
+    const { eventId } = req.body;
     const organizerId = req.params.organizerId;
     if (!userId) {
         throw new Error('Unauthorized');
     }
     try {
+        const event = yield index_1.default.event.findUnique({
+            where: {
+                id: eventId
+            }
+        });
+        if (!event) {
+            throw new Error('Event not found');
+        }
         const existingChat = yield index_1.default.chat.findFirst({
             where: { userId, organizerId },
             select: {
@@ -51,6 +60,7 @@ exports.chatRouter.post('/:organizerId', user_1.userMiddleware, (req, res) => __
             data: {
                 userId: userId,
                 organizerId: organizerId,
+                eventId: eventId,
                 messages: {
                     create: [
                         {
@@ -60,6 +70,19 @@ exports.chatRouter.post('/:organizerId', user_1.userMiddleware, (req, res) => __
                             seen: false
                         }
                     ]
+                }
+            },
+            select: {
+                id: true,
+                messages: {
+                    select: {
+                        senderId: true,
+                        receiverId: true,
+                        text: true,
+                        seen: true,
+                        createdAt: true
+                    },
+                    orderBy: { createdAt: 'asc' }
                 }
             }
         });
@@ -107,7 +130,10 @@ exports.chatRouter.get('/organizer', user_1.userMiddleware, (req, res) => __awai
     try {
         const chats = yield index_1.default.chat.findMany({
             where: {
-                organizerId: organizerId
+                organizerId: organizerId,
+                event: {
+                    isDeleted: false
+                }
             },
             select: {
                 id: true,
@@ -147,28 +173,6 @@ exports.chatRouter.get('/:chatId', user_1.userMiddleware, (req, res) => __awaite
             }
         });
         res.json(messages);
-    }
-    catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal Server Error' });
-    }
-}));
-// marking messages as seen
-exports.chatRouter.put('/messagesseen/:chatId', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const chatId = req.params.chatId;
-    const { receiverId } = req.body;
-    try {
-        yield index_1.default.message.updateMany({
-            where: {
-                chatId: chatId,
-                receiverId: receiverId,
-                seen: false,
-            },
-            data: {
-                seen: true
-            }
-        });
-        res.json('messages seen');
     }
     catch (error) {
         console.error(error);

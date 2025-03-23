@@ -165,6 +165,7 @@ exports.eventRouter.get("/:eventId", (req, res) => __awaiter(void 0, void 0, voi
         const event = yield index_1.default.event.findUnique({
             where: {
                 id: eventId,
+                isDeleted: false
             },
             select: {
                 id: true,

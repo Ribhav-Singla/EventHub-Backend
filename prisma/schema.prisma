@@ -57,6 +57,7 @@ model Event {
   creator               User          @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   transactions          Transaction[]
   wishlist              Wishlist[]
+  chats                 Chat[]        @relation(name: "EventChats")
   created_at            DateTime      @default(now())
   updated_at            DateTime      @default(now()) @updatedAt
   isDeleted             Boolean       @default(false)
@@ -75,7 +76,7 @@ model Organizer {
   id      String @id @default(cuid())
   phone   String
   userId  String
-  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   eventId String @unique
   event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
@@ -126,6 +127,8 @@ model Chat {
   user        User      @relation(name: "UserChats", fields: [userId], references: [id], onDelete: Cascade)
   organizerId String
   organizer   User      @relation(name: "OrganizerChats", fields: [organizerId], references: [id], onDelete: Cascade)
+  eventId     String
+  event       Event     @relation(name: "EventChats", fields: [eventId], references: [id])
   messages    Message[]
   created_at  DateTime  @default(now())
   updated_at  DateTime  @updatedAt

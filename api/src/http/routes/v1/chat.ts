@@ -8,12 +8,22 @@ export const chatRouter = express.Router();
 // startChat
 chatRouter.post('/:organizerId', userMiddleware, async (req, res) => {
     console.log('inside startChat');
-    const userId = req.userId
-    const organizerId = req.params.organizerId
+    const userId = req.userId;
+    const { eventId } = req.body;
+    const organizerId = req.params.organizerId;
     if (!userId) {
         throw new Error('Unauthorized');
     }
     try {
+
+        const event = await client.event.findUnique({
+            where:{
+                id: eventId
+            }
+        })
+        if (!event) {
+            throw new Error('Event not found');
+        }
 
         const existingChat = await client.chat.findFirst({
             where: { userId, organizerId },
@@ -41,6 +51,7 @@ chatRouter.post('/:organizerId', userMiddleware, async (req, res) => {
             data: {
                 userId: userId,
                 organizerId: organizerId,
+                eventId : eventId,
                 messages: {
                     create: [
                         {
@@ -50,6 +61,19 @@ chatRouter.post('/:organizerId', userMiddleware, async (req, res) => {
                             seen: false
                         }
                     ]
+                }
+            },
+            select: {
+                id: true,
+                messages: {
+                    select: {
+                        senderId: true,
+                        receiverId: true,
+                        text: true,
+                        seen: true,
+                        createdAt: true
+                    },
+                    orderBy: { createdAt: 'asc' }
                 }
             }
         })
@@ -83,7 +107,7 @@ chatRouter.post('/sendmessage/:chatId', userMiddleware, async (req, res) => {
 
         // realtime functionality
         const receiverSocket = getReceiverSocket(receiverId);
-        if(receiverSocket){
+        if (receiverSocket) {
             receiverSocket.emit('newMessage', message);
         }
 
@@ -100,7 +124,10 @@ chatRouter.get('/organizer', userMiddleware, async (req, res) => {
     try {
         const chats = await client.chat.findMany({
             where: {
-                organizerId: organizerId
+                organizerId: organizerId,
+                event: {
+                    isDeleted: false
+                }
             },
             select: {
                 id: true,
@@ -140,28 +167,6 @@ chatRouter.get('/:chatId', userMiddleware, async (req, res) => {
             }
         })
         res.json(messages)
-    } catch (error) {
-        console.error(error)
-        res.status(500).json({ message: 'Internal Server Error' })
-    }
-})
-
-// marking messages as seen
-chatRouter.put('/messagesseen/:chatId', userMiddleware, async (req, res) => {
-    const chatId = req.params.chatId
-    const { receiverId } = req.body
-    try {
-        await client.message.updateMany({
-            where: {
-                chatId: chatId,
-                receiverId: receiverId,
-                seen: false,
-            },
-            data: {
-                seen: true
-            }
-        })
-        res.json('messages seen')
     } catch (error) {
         console.error(error)
         res.status(500).json({ message: 'Internal Server Error' })
