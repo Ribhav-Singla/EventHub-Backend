@@ -120,7 +120,6 @@ exports.userRouter.get("/wishlist", user_1.userMiddleware, (req, res) => __await
 }));
 exports.userRouter.post("/event/publish", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("inside publish event");
-    console.log(req.body);
     if (!req.userId) {
         res.status(401).json({ message: "Unauthorized" });
         return;

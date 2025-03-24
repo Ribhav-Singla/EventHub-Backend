@@ -31,6 +31,7 @@ exports.imageRouter.post('/', user_1.userMiddleware, upload.array('files', 10), 
     const files = req.files;
     if (files) {
         const fileUrls = files.map((file) => file.filename);
+        console.log(fileUrls);
         res.json({ urls: fileUrls });
     }
     else {

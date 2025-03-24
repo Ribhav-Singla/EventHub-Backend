@@ -18,7 +18,6 @@ const index_1 = __importDefault(require("../../../db/index"));
 const moment_timezone_1 = __importDefault(require("moment-timezone"));
 exports.eventRouter = express_1.default.Router();
 exports.eventRouter.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log(req.query);
     const limit = 9;
     const page = Number(req.query.page) || 1;
     const skip = (page - 1) * limit;
@@ -80,7 +79,6 @@ exports.eventRouter.get("/", (req, res) => __awaiter(void 0, void 0, void 0, fun
                 filters.date.lte = new Date(`${req.query.end_date}T23:59:59Z`);
             }
         }
-        console.log("Generated Filters:", filters); // Debugging
         // Fetch events with filters
         const fetched_events = yield index_1.default.event.findMany({
             where: Object.keys(filters).length > 0 ? filters : undefined,

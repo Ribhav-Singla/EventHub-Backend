@@ -21,6 +21,7 @@ imageRouter.post('/', userMiddleware,upload.array('files', 10), async (req, res)
     const files = req.files as Express.Multer.File[] | undefined;
     if (files) {
         const fileUrls = files.map((file) => file.filename);
+        console.log(fileUrls);
         res.json({ urls: fileUrls });
     } else {
         res.json({ error: 'Internal server error' });
