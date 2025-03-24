@@ -127,7 +127,7 @@ exports.userRouter.post("/event/publish", user_1.userMiddleware, (req, res) => _
     try {
         const organizer_user = yield index_1.default.user.findFirst({
             where: {
-                email: req.body.organizer_details[0].email
+                email: req.body.organizer_details[0].user.email
             }
         });
         if (!organizer_user) {

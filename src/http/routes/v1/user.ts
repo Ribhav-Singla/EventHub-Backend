@@ -124,9 +124,10 @@ userRouter.post("/event/publish", userMiddleware, async (req, res) => {
 
         const organizer_user = await client.user.findFirst({
             where: {
-                email: req.body.organizer_details[0].email
+                email: req.body.organizer_details[0].user.email
             }
         })
+        
         if (!organizer_user) {
             res.status(404).json({ message: "Organizer not found" });
             return
