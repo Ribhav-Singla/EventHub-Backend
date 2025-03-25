@@ -66,7 +66,7 @@ exports.chatRouter.post('/:organizerId', user_1.userMiddleware, (req, res) => __
                         {
                             senderId: userId,
                             receiverId: organizerId,
-                            text: 'Hi, wanted to enquiry!',
+                            text: `Hi, wanted to enquiry regarding ${event.title}!`,
                             seen: false
                         }
                     ]

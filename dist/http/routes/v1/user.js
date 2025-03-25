@@ -62,7 +62,9 @@ exports.userRouter.get("/wishlist", user_1.userMiddleware, (req, res) => __await
     try {
         let filter = {
             userId: req.userId,
-            isDeleted: false
+            event: {
+                isDeleted: false
+            }
         };
         if (category !== "all") {
             filter.event = { category };
