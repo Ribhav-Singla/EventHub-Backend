@@ -17,7 +17,7 @@ chatRouter.post('/:organizerId', userMiddleware, async (req, res) => {
     try {
 
         const event = await client.event.findUnique({
-            where:{
+            where: {
                 id: eventId
             }
         })
@@ -51,7 +51,7 @@ chatRouter.post('/:organizerId', userMiddleware, async (req, res) => {
             data: {
                 userId: userId,
                 organizerId: organizerId,
-                eventId : eventId,
+                eventId: eventId,
                 messages: {
                     create: [
                         {
@@ -140,11 +140,17 @@ chatRouter.get('/organizer', userMiddleware, async (req, res) => {
                 },
                 messages: {
                     orderBy: { createdAt: 'desc' },
-                    take: 1
+                    take: 1,
                 }
             },
-            orderBy: { created_at: 'desc' }
         })
+
+        chats.sort((a, b) => {
+            const latestMessageA = a.messages[0]?.createdAt ? new Date(a.messages[0].createdAt).getTime() : 0;
+            const latestMessageB = b.messages[0]?.createdAt ? new Date(b.messages[0].createdAt).getTime() : 0;
+            return latestMessageB - latestMessageA;
+        });
+        
         res.json(chats)
     } catch (error) {
         console.error(error)

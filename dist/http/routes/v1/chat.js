@@ -146,10 +146,15 @@ exports.chatRouter.get('/organizer', user_1.userMiddleware, (req, res) => __awai
                 },
                 messages: {
                     orderBy: { createdAt: 'desc' },
-                    take: 1
+                    take: 1,
                 }
             },
-            orderBy: { created_at: 'desc' }
+        });
+        chats.sort((a, b) => {
+            var _a, _b;
+            const latestMessageA = ((_a = a.messages[0]) === null || _a === void 0 ? void 0 : _a.createdAt) ? new Date(a.messages[0].createdAt).getTime() : 0;
+            const latestMessageB = ((_b = b.messages[0]) === null || _b === void 0 ? void 0 : _b.createdAt) ? new Date(b.messages[0].createdAt).getTime() : 0;
+            return latestMessageB - latestMessageA;
         });
         res.json(chats);
     }
