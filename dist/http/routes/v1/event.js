@@ -118,6 +118,7 @@ exports.eventRouter.get("/", (req, res) => __awaiter(void 0, void 0, void 0, fun
 }));
 exports.eventRouter.get("/upcoming", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const limit = Number(req.query.limit) | 1;
+    const skip = Number(req.query.skip) || 0;
     try {
         const currentDateTimeIST = moment_timezone_1.default
             .utc()
@@ -148,6 +149,7 @@ exports.eventRouter.get("/upcoming", (req, res) => __awaiter(void 0, void 0, voi
             },
             orderBy: [{ date: "asc" }],
             take: limit,
+            skip: skip
         });
         const events = fetched_events.map((event) => (Object.assign(Object.assign({}, event), { images: event.images.slice(0, 1) || [] })));
         res.status(200).json(events);

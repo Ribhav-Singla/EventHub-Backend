@@ -135,6 +135,7 @@ eventRouter.get("/", async (req, res) => {
 
 eventRouter.get("/upcoming", async (req, res) => {
     const limit = Number(req.query.limit) | 1;
+    const skip = Number(req.query.skip) || 0;
     try {
         const currentDateTimeIST = moment
             .utc()
@@ -165,6 +166,7 @@ eventRouter.get("/upcoming", async (req, res) => {
             },
             orderBy: [{ date: "asc" }],
             take: limit,
+            skip: skip
         });
 
         const events = fetched_events.map((event:any) => ({
