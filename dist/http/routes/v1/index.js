@@ -93,9 +93,18 @@ exports.router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, fu
             });
             return;
         }
-        const token = jsonwebtoken_1.default.sign({
-            userId: user.id
-        }, config_1.JWT_PASSWORD);
+        // check if the user is guest or not
+        let token = '';
+        if (user.email === process.env.GUEST_EMAIL) {
+            token = jsonwebtoken_1.default.sign({
+                userId: user.id
+            }, config_1.JWT_PASSWORD, { expiresIn: '1h' });
+        }
+        else {
+            token = jsonwebtoken_1.default.sign({
+                userId: user.id
+            }, config_1.JWT_PASSWORD);
+        }
         res.json({
             id: user.id,
             firstname: user.firstname,
@@ -217,6 +226,36 @@ exports.router.post('/me', user_1.userMiddleware, (req, res) => __awaiter(void 0
     }
     catch (error) {
         res.status(500).json({ message: "Internal server error" });
+    }
+}));
+exports.router.post('/forgotpassword', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const user = yield index_1.default.user.findUnique({
+            where: {
+                email: req.body.email
+            }
+        });
+        if (!user) {
+            res.status(404).json({ message: 'User not found' });
+            return;
+        }
+        // update with req.body.new_password
+        const saltRounds = 10;
+        const salt = bcrypt_1.default.genSaltSync(saltRounds);
+        const hashedPassword = bcrypt_1.default.hashSync(req.body.new_password, salt);
+        const userUpdate = yield index_1.default.user.update({
+            where: {
+                email: req.body.email
+            },
+            data: {
+                password: hashedPassword
+            }
+        });
+        res.json({ userId: userUpdate.id });
+    }
+    catch (error) {
+        console.log('error in update password', error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 }));
 exports.router.post('/newsletter', (req, res) => __awaiter(void 0, void 0, void 0, function* () {

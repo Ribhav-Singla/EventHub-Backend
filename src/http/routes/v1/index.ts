@@ -84,9 +84,18 @@ router.post('/login', async (req, res) => {
             })
             return
         }
-        const token = jwt.sign({
-            userId: user.id
-        }, JWT_PASSWORD);
+        
+        // check if the user is guest or not
+        let token = '';
+        if (user.email === process.env.GUEST_EMAIL) {
+            token = jwt.sign({
+                userId: user.id
+            }, JWT_PASSWORD, { expiresIn: '1h' });
+        } else {
+            token = jwt.sign({
+                userId: user.id
+            }, JWT_PASSWORD);
+        }
 
         res.json({
             id: user.id,
@@ -223,6 +232,38 @@ router.post('/me', userMiddleware, async (req, res) => {
         })
     } catch (error) {
         res.status(500).json({ message: "Internal server error" })
+    }
+})
+
+router.post('/forgotpassword', async (req, res) => {
+    try {
+        const user = await client.user.findUnique({
+            where: {
+                email : req.body.email
+            }
+        })
+
+        if (!user) {
+            res.status(404).json({ message: 'User not found' });
+            return
+        }
+
+        // update with req.body.new_password
+        const saltRounds = 10;
+        const salt = bcrypt.genSaltSync(saltRounds)
+        const hashedPassword = bcrypt.hashSync(req.body.new_password, salt)
+        const userUpdate = await client.user.update({
+            where: {
+                email : req.body.email
+            },
+            data: {
+                password: hashedPassword
+            }
+        })
+        res.json({ userId: userUpdate.id })
+    } catch (error) {
+        console.log('error in update password', error);
+        res.status(500).json({ message: 'Internal Server Error' })
     }
 })
 
