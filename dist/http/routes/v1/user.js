@@ -19,6 +19,7 @@ const index_1 = __importDefault(require("../../../db/index"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const moment_timezone_1 = __importDefault(require("moment-timezone"));
 const utils_1 = require("../../utils");
+const guest_1 = require("../../middleware/guest");
 exports.userRouter = express_1.default.Router();
 exports.userRouter.post("/wishlist/:eventId", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("inside wishlist");
@@ -120,7 +121,7 @@ exports.userRouter.get("/wishlist", user_1.userMiddleware, (req, res) => __await
         res.status(500).json({ message: "Internal Server Error" });
     }
 }));
-exports.userRouter.post("/event/publish", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.userRouter.post("/event/publish", guest_1.restrictGuestActions, user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("inside publish event");
     if (!req.userId) {
         res.status(401).json({ message: "Unauthorized" });
@@ -296,7 +297,7 @@ exports.userRouter.get('/:eventId', (req, res) => __awaiter(void 0, void 0, void
         res.status(500).json({ message: 'Internal Server Error' });
     }
 }));
-exports.userRouter.put('/:eventId', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.userRouter.put('/:eventId', user_1.userMiddleware, guest_1.restrictGuestActions, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('Inside update');
     const eventId = req.params.eventId;
     try {
@@ -367,7 +368,7 @@ exports.userRouter.put('/:eventId', user_1.userMiddleware, (req, res) => __await
         res.status(500).json({ message: 'Internal Server Error' });
     }
 }));
-exports.userRouter.delete('/:eventId', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.userRouter.delete('/:eventId', user_1.userMiddleware, guest_1.restrictGuestActions, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const eventId = req.params.eventId;
     try {
         const event = yield index_1.default.event.update({
@@ -412,7 +413,7 @@ exports.userRouter.get('/profile/data', user_1.userMiddleware, (req, res) => __a
         res.status(500).json({ message: 'Internal Server Error' });
     }
 }));
-exports.userRouter.put('/profile/data', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.userRouter.put('/profile/data', user_1.userMiddleware, guest_1.restrictGuestActions, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const user = yield index_1.default.user.update({
             where: {
@@ -435,7 +436,7 @@ exports.userRouter.put('/profile/data', user_1.userMiddleware, (req, res) => __a
         res.status(500).json({ message: 'Internal Server Error' });
     }
 }));
-exports.userRouter.post('/profile/update/password', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.userRouter.post('/profile/update/password', user_1.userMiddleware, guest_1.restrictGuestActions, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const user = yield index_1.default.user.findUnique({
             where: {
@@ -472,7 +473,7 @@ exports.userRouter.post('/profile/update/password', user_1.userMiddleware, (req,
         res.status(500).json({ message: 'Internal Server Error' });
     }
 }));
-exports.userRouter.post('/ticket/transaction/:eventId', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.userRouter.post('/ticket/transaction/:eventId', user_1.userMiddleware, guest_1.restrictGuestActions, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('Inside transaction');
     const eventId = req.params.eventId;
     try {

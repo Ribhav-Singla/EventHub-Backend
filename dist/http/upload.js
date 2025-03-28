@@ -16,6 +16,7 @@ exports.imageRouter = void 0;
 const express_1 = __importDefault(require("express"));
 const multer_1 = __importDefault(require("multer"));
 const user_1 = require("./middleware/user");
+const guest_1 = require("./middleware/guest");
 exports.imageRouter = express_1.default.Router();
 const storage = multer_1.default.diskStorage({
     destination: function (req, file, cb) {
@@ -26,7 +27,7 @@ const storage = multer_1.default.diskStorage({
     }
 });
 const upload = (0, multer_1.default)({ storage: storage });
-exports.imageRouter.post('/', user_1.userMiddleware, upload.array('files', 10), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.imageRouter.post('/', user_1.userMiddleware, guest_1.restrictGuestActions, upload.array('files', 10), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('inside image upload');
     const files = req.files;
     if (files) {

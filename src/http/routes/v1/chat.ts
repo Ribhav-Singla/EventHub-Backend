@@ -1,5 +1,6 @@
 import express from 'express';
 import { userMiddleware } from '../../middleware/user';
+import { restrictGuestActions } from '../../middleware/guest';
 import client from '../../../db/index';
 import { getReceiverSocket } from '../../socket';
 
@@ -86,7 +87,7 @@ chatRouter.post('/:organizerId', userMiddleware, async (req, res) => {
 })
 
 // sendMessage
-chatRouter.post('/sendmessage/:chatId', userMiddleware, async (req, res) => {
+chatRouter.post('/sendmessage/:chatId', userMiddleware, restrictGuestActions ,async (req, res) => {
     console.log('inside send message')
     const userId = req.userId
     const chatId = req.params.chatId

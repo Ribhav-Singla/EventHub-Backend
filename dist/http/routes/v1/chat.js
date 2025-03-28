@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.chatRouter = void 0;
 const express_1 = __importDefault(require("express"));
 const user_1 = require("../../middleware/user");
+const guest_1 = require("../../middleware/guest");
 const index_1 = __importDefault(require("../../../db/index"));
 const socket_1 = require("../../socket");
 exports.chatRouter = express_1.default.Router();
@@ -94,7 +95,7 @@ exports.chatRouter.post('/:organizerId', user_1.userMiddleware, (req, res) => __
     }
 }));
 // sendMessage
-exports.chatRouter.post('/sendmessage/:chatId', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.chatRouter.post('/sendmessage/:chatId', user_1.userMiddleware, guest_1.restrictGuestActions, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('inside send message');
     const userId = req.userId;
     const chatId = req.params.chatId;

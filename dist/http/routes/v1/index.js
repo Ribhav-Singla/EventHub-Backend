@@ -27,6 +27,7 @@ const googleapis_1 = require("googleapis");
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const node_cron_1 = __importDefault(require("node-cron"));
 const chat_1 = require("./chat");
+const guest_1 = require("../../middleware/guest");
 exports.router = express_1.default.Router();
 const transporter = nodemailer_1.default.createTransport({
     service: 'Gmail',
@@ -258,7 +259,7 @@ exports.router.post('/forgotpassword', (req, res) => __awaiter(void 0, void 0, v
         res.status(500).json({ message: 'Internal Server Error' });
     }
 }));
-exports.router.post('/newsletter', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.router.post('/newsletter', guest_1.restrictGuestActions, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { email } = req.body;
     try {
         const user = yield index_1.default.user.update({

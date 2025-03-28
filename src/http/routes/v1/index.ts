@@ -12,6 +12,7 @@ import { google } from 'googleapis';
 import nodemailer from 'nodemailer'
 import cron from 'node-cron';
 import { chatRouter } from './chat'
+import { restrictGuestActions } from '../../middleware/guest'
 
 export const router = express.Router()
 
@@ -84,7 +85,7 @@ router.post('/login', async (req, res) => {
             })
             return
         }
-        
+
         // check if the user is guest or not
         let token = '';
         if (user.email === process.env.GUEST_EMAIL) {
@@ -239,7 +240,7 @@ router.post('/forgotpassword', async (req, res) => {
     try {
         const user = await client.user.findUnique({
             where: {
-                email : req.body.email
+                email: req.body.email
             }
         })
 
@@ -254,7 +255,7 @@ router.post('/forgotpassword', async (req, res) => {
         const hashedPassword = bcrypt.hashSync(req.body.new_password, salt)
         const userUpdate = await client.user.update({
             where: {
-                email : req.body.email
+                email: req.body.email
             },
             data: {
                 password: hashedPassword
@@ -267,7 +268,7 @@ router.post('/forgotpassword', async (req, res) => {
     }
 })
 
-router.post('/newsletter', async (req, res) => {
+router.post('/newsletter', restrictGuestActions, async (req, res) => {
     const { email } = req.body;
     try {
         const user = await client.user.update({

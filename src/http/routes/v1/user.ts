@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import moment from "moment-timezone";
 import { LOCATION_TYPE, ORGANIZER_DETAILS_TYPE } from "../../types";
 import { categorizeAge, formatDateLabel, findNearestLabel, findNearestDate } from "../../utils";
+import { restrictGuestActions } from "../../middleware/guest";
 
 export const userRouter = express.Router();
 
@@ -114,7 +115,7 @@ userRouter.get("/wishlist", userMiddleware, async (req, res) => {
     }
 });
 
-userRouter.post("/event/publish", userMiddleware, async (req, res) => {
+userRouter.post("/event/publish", restrictGuestActions,userMiddleware, async (req, res) => {
     console.log("inside publish event");
 
     if (!req.userId) {
@@ -302,7 +303,7 @@ userRouter.get('/:eventId', async (req, res) => {
     }
 })
 
-userRouter.put('/:eventId', userMiddleware, async (req, res) => {
+userRouter.put('/:eventId', userMiddleware, restrictGuestActions,async (req, res) => {
     console.log('Inside update');
     const eventId = req.params.eventId;    
     try {
@@ -376,7 +377,7 @@ userRouter.put('/:eventId', userMiddleware, async (req, res) => {
     }
 });
 
-userRouter.delete('/:eventId', userMiddleware, async (req, res) => {
+userRouter.delete('/:eventId', userMiddleware, restrictGuestActions,async (req, res) => {
     const eventId = req.params.eventId;
     try {
         const event = await client.event.update({
@@ -421,7 +422,7 @@ userRouter.get('/profile/data', userMiddleware, async (req, res) => {
     }
 })
 
-userRouter.put('/profile/data', userMiddleware, async (req, res) => {
+userRouter.put('/profile/data', userMiddleware, restrictGuestActions,async (req, res) => {
     try {
         const user = await client.user.update({
             where: {
@@ -444,7 +445,7 @@ userRouter.put('/profile/data', userMiddleware, async (req, res) => {
     }
 })
 
-userRouter.post('/profile/update/password', userMiddleware, async (req, res) => {
+userRouter.post('/profile/update/password', userMiddleware, restrictGuestActions,async (req, res) => {
     try {
         const user = await client.user.findUnique({
             where: {
@@ -485,7 +486,7 @@ userRouter.post('/profile/update/password', userMiddleware, async (req, res) => 
     }
 })
 
-userRouter.post('/ticket/transaction/:eventId', userMiddleware, async (req, res) => {
+userRouter.post('/ticket/transaction/:eventId', userMiddleware, restrictGuestActions,async (req, res) => {
     console.log('Inside transaction');
     const eventId = req.params.eventId;
 
