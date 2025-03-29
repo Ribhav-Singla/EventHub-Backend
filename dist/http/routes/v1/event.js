@@ -214,6 +214,7 @@ exports.eventRouter.get("/:eventId", (req, res) => __awaiter(void 0, void 0, voi
         if (event && event.wishlist && event.wishlist.length > 0) {
             heart = true;
         }
+        console.log("heart", heart);
         res.status(200).json({
             event,
             heart,

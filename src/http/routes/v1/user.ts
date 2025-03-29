@@ -3,9 +3,10 @@ import { userMiddleware } from "../../middleware/user";
 import client from "../../../db/index";
 import bcrypt from 'bcrypt';
 import moment from "moment-timezone";
-import { LOCATION_TYPE, ORGANIZER_DETAILS_TYPE } from "../../types";
-import { categorizeAge, formatDateLabel, findNearestLabel, findNearestDate } from "../../utils";
+import { eventSchema, profileSchema } from "../../types";
+import { categorizeAge, formatDateLabel, findNearestDate } from "../../utils";
 import { restrictGuestActions } from "../../middleware/guest";
+import z from 'zod'
 
 export const userRouter = express.Router();
 
@@ -117,6 +118,12 @@ userRouter.get("/wishlist", userMiddleware, async (req, res) => {
 
 userRouter.post("/event/publish", restrictGuestActions,userMiddleware, async (req, res) => {
     console.log("inside publish event");
+
+    const {success,error} = eventSchema.safeParse(req.body)
+    if(error){
+        res.status(400).json({message: "Invalid request"})
+        return ;
+    }
 
     if (!req.userId) {
         res.status(401).json({ message: "Unauthorized" });
@@ -305,7 +312,16 @@ userRouter.get('/:eventId', async (req, res) => {
 
 userRouter.put('/:eventId', userMiddleware, restrictGuestActions,async (req, res) => {
     console.log('Inside update');
-    const eventId = req.params.eventId;    
+    const eventId = req.params.eventId;  
+    
+    const {success,error} = eventSchema.safeParse(req.body)
+    if(error){
+        console.log(error);
+        
+        res.status(400).json({message: "Invalid request"})
+        return ;
+    }
+    
     try {
 
         const organizer_user = await client.user.findFirst({
@@ -423,6 +439,13 @@ userRouter.get('/profile/data', userMiddleware, async (req, res) => {
 })
 
 userRouter.put('/profile/data', userMiddleware, restrictGuestActions,async (req, res) => {
+
+    const {success,error} = profileSchema.safeParse(req.body)
+    if(error){
+        res.status(400).json({message: 'Invalid Request'})
+        return ;
+    }
+
     try {
         const user = await client.user.update({
             where: {
@@ -465,6 +488,16 @@ userRouter.post('/profile/update/password', userMiddleware, restrictGuestActions
                 return
             }
 
+        }
+
+        const passwordSchema = z.string().regex(
+            /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).+$/,
+            "Password must contain at least one lowercase letter, one uppercase letter, one digit, and one special character."
+        );
+        const validation = passwordSchema.safeParse(req.body.new_password);
+        if (!validation.success) {
+            res.status(400).json({ message: validation.error.errors[0].message });
+            return 
         }
 
         // update with req.body.new_password

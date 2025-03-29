@@ -28,6 +28,7 @@ const nodemailer_1 = __importDefault(require("nodemailer"));
 const node_cron_1 = __importDefault(require("node-cron"));
 const chat_1 = require("./chat");
 const guest_1 = require("../../middleware/guest");
+const types_1 = require("../../types");
 exports.router = express_1.default.Router();
 const transporter = nodemailer_1.default.createTransport({
     service: 'Gmail',
@@ -41,6 +42,11 @@ exports.router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function
 }));
 exports.router.post('/signup', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('inside signup');
+    const { success, error } = types_1.signinSchema.safeParse(req.body);
+    if (error) {
+        res.status(400).json({ error: 'Invalid Request.' });
+        return;
+    }
     const saltRounds = 10;
     const salt = bcrypt_1.default.genSaltSync(saltRounds);
     const hashedPassword = bcrypt_1.default.hashSync(req.body.password, salt);
@@ -75,6 +81,11 @@ exports.router.post('/signup', (req, res) => __awaiter(void 0, void 0, void 0, f
 }));
 exports.router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('inside login');
+    const { success, error } = types_1.loginSchema.safeParse(req.body);
+    if (error) {
+        res.status(400).json({ error: 'Invalid Request.' });
+        return;
+    }
     try {
         const user = yield index_1.default.user.findUnique({
             where: {
@@ -230,6 +241,11 @@ exports.router.post('/me', user_1.userMiddleware, (req, res) => __awaiter(void 0
     }
 }));
 exports.router.post('/forgotpassword', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { success, error } = types_1.forgotPasswordScehma.safeParse(req.body);
+    if (error) {
+        res.status(400).json({ message: "Invalid request" });
+        return;
+    }
     try {
         const user = yield index_1.default.user.findUnique({
             where: {
@@ -260,6 +276,11 @@ exports.router.post('/forgotpassword', (req, res) => __awaiter(void 0, void 0, v
     }
 }));
 exports.router.post('/newsletter', guest_1.restrictGuestActions, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { success, error } = types_1.newsletterScehma.safeParse(req.body);
+    if (error) {
+        res.status(400).json({ message: "Invalid request" });
+        return;
+    }
     const { email } = req.body;
     try {
         const user = yield index_1.default.user.update({

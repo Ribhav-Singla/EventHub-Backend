@@ -13,6 +13,7 @@ import nodemailer from 'nodemailer'
 import cron from 'node-cron';
 import { chatRouter } from './chat'
 import { restrictGuestActions } from '../../middleware/guest'
+import { forgotPasswordScehma, loginSchema, newsletterScehma, signinSchema } from '../../types'
 
 export const router = express.Router()
 
@@ -30,6 +31,13 @@ router.get('/', async (req, res) => {
 
 router.post('/signup', async (req, res) => {
     console.log('inside signup');
+
+    const { success, error } = signinSchema.safeParse(req.body)
+    if (error) {
+        res.status(400).json({ error: 'Invalid Request.' })
+        return;
+    }
+
     const saltRounds = 10;
     const salt = bcrypt.genSaltSync(saltRounds)
     const hashedPassword = bcrypt.hashSync(req.body.password, salt)
@@ -66,6 +74,13 @@ router.post('/signup', async (req, res) => {
 
 router.post('/login', async (req, res) => {
     console.log('inside login');
+
+    const {success,error} = loginSchema.safeParse(req.body)
+    if(error){
+        res.status(400).json({error: 'Invalid Request.'})
+        return;
+    }
+
     try {
         const user = await client.user.findUnique({
             where: {
@@ -237,6 +252,14 @@ router.post('/me', userMiddleware, async (req, res) => {
 })
 
 router.post('/forgotpassword', async (req, res) => {
+
+    const {success,error} = forgotPasswordScehma.safeParse(req.body)
+    
+    if(error){
+        res.status(400).json({ message: "Invalid request" })
+        return ;
+    }
+
     try {
         const user = await client.user.findUnique({
             where: {
@@ -269,6 +292,13 @@ router.post('/forgotpassword', async (req, res) => {
 })
 
 router.post('/newsletter', restrictGuestActions, async (req, res) => {
+
+    const {success,error} = newsletterScehma.safeParse(req.body)
+    if(error){
+        res.status(400).json({ message: "Invalid request" })
+        return ;
+    }
+
     const { email } = req.body;
     try {
         const user = await client.user.update({

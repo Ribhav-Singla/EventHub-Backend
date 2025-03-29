@@ -237,6 +237,9 @@ eventRouter.get("/:eventId", async (req, res) => {
             heart = true;
         }
 
+        console.log("heart", heart);
+        
+
         res.status(200).json({
             event,
             heart,

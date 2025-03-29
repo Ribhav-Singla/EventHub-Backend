@@ -18,6 +18,7 @@ const user_1 = require("../../middleware/user");
 const guest_1 = require("../../middleware/guest");
 const index_1 = __importDefault(require("../../../db/index"));
 const socket_1 = require("../../socket");
+const types_1 = require("../../types");
 exports.chatRouter = express_1.default.Router();
 // startChat
 exports.chatRouter.post('/:organizerId', user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -99,6 +100,11 @@ exports.chatRouter.post('/sendmessage/:chatId', user_1.userMiddleware, guest_1.r
     console.log('inside send message');
     const userId = req.userId;
     const chatId = req.params.chatId;
+    const { success, error } = types_1.sendMessageScehma.safeParse(req.body);
+    if (error) {
+        res.status(400).json({ message: 'Invalid Request' });
+        return;
+    }
     const { receiverId, text } = req.body;
     if (!userId) {
         throw new Error('Unauthorized');

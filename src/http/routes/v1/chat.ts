@@ -3,6 +3,7 @@ import { userMiddleware } from '../../middleware/user';
 import { restrictGuestActions } from '../../middleware/guest';
 import client from '../../../db/index';
 import { getReceiverSocket } from '../../socket';
+import { sendMessageScehma } from '../../types';
 
 export const chatRouter = express.Router();
 
@@ -91,6 +92,13 @@ chatRouter.post('/sendmessage/:chatId', userMiddleware, restrictGuestActions ,as
     console.log('inside send message')
     const userId = req.userId
     const chatId = req.params.chatId
+
+    const {success,error} = sendMessageScehma.safeParse(req.body)
+    if(error){
+        res.status(400).json({message: 'Invalid Request'})
+        return ;
+    }
+
     const { receiverId, text } = req.body
     if (!userId) {
         throw new Error('Unauthorized')

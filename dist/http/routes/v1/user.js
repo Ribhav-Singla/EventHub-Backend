@@ -18,8 +18,10 @@ const user_1 = require("../../middleware/user");
 const index_1 = __importDefault(require("../../../db/index"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const moment_timezone_1 = __importDefault(require("moment-timezone"));
+const types_1 = require("../../types");
 const utils_1 = require("../../utils");
 const guest_1 = require("../../middleware/guest");
+const zod_1 = __importDefault(require("zod"));
 exports.userRouter = express_1.default.Router();
 exports.userRouter.post("/wishlist/:eventId", user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("inside wishlist");
@@ -123,6 +125,11 @@ exports.userRouter.get("/wishlist", user_1.userMiddleware, (req, res) => __await
 }));
 exports.userRouter.post("/event/publish", guest_1.restrictGuestActions, user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("inside publish event");
+    const { success, error } = types_1.eventSchema.safeParse(req.body);
+    if (error) {
+        res.status(400).json({ message: "Invalid request" });
+        return;
+    }
     if (!req.userId) {
         res.status(401).json({ message: "Unauthorized" });
         return;
@@ -300,6 +307,12 @@ exports.userRouter.get('/:eventId', (req, res) => __awaiter(void 0, void 0, void
 exports.userRouter.put('/:eventId', user_1.userMiddleware, guest_1.restrictGuestActions, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('Inside update');
     const eventId = req.params.eventId;
+    const { success, error } = types_1.eventSchema.safeParse(req.body);
+    if (error) {
+        console.log(error);
+        res.status(400).json({ message: "Invalid request" });
+        return;
+    }
     try {
         const organizer_user = yield index_1.default.user.findFirst({
             where: {
@@ -414,6 +427,11 @@ exports.userRouter.get('/profile/data', user_1.userMiddleware, (req, res) => __a
     }
 }));
 exports.userRouter.put('/profile/data', user_1.userMiddleware, guest_1.restrictGuestActions, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { success, error } = types_1.profileSchema.safeParse(req.body);
+    if (error) {
+        res.status(400).json({ message: 'Invalid Request' });
+        return;
+    }
     try {
         const user = yield index_1.default.user.update({
             where: {
@@ -453,6 +471,12 @@ exports.userRouter.post('/profile/update/password', user_1.userMiddleware, guest
                 res.status(401).json({ message: 'Invalid current password' });
                 return;
             }
+        }
+        const passwordSchema = zod_1.default.string().regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).+$/, "Password must contain at least one lowercase letter, one uppercase letter, one digit, and one special character.");
+        const validation = passwordSchema.safeParse(req.body.new_password);
+        if (!validation.success) {
+            res.status(400).json({ message: validation.error.errors[0].message });
+            return;
         }
         // update with req.body.new_password
         const saltRounds = 10;
