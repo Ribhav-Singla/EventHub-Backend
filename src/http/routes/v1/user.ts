@@ -116,11 +116,11 @@ userRouter.get("/wishlist", userMiddleware, async (req, res) => {
     }
 });
 
-userRouter.post("/event/publish", restrictGuestActions,userMiddleware, async (req, res) => {
+userRouter.post("/event/publish",userMiddleware, restrictGuestActions ,async (req, res) => {
     console.log("inside publish event");
 
     const {success,error} = eventSchema.safeParse(req.body)
-    if(error){
+    if(error){        
         res.status(400).json({message: "Invalid request"})
         return ;
     }

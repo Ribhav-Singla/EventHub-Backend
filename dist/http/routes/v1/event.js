@@ -16,6 +16,7 @@ exports.eventRouter = void 0;
 const express_1 = __importDefault(require("express"));
 const index_1 = __importDefault(require("../../../db/index"));
 const moment_timezone_1 = __importDefault(require("moment-timezone"));
+const user_1 = require("../../middleware/user");
 exports.eventRouter = express_1.default.Router();
 exports.eventRouter.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const limit = 9;
@@ -159,66 +160,80 @@ exports.eventRouter.get("/upcoming", (req, res) => __awaiter(void 0, void 0, voi
         res.status(500).json({ message: "Internal Server Error" });
     }
 }));
-exports.eventRouter.get("/:eventId", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.eventRouter.get("/:eventId", user_1.optionalUserMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const eventId = req.params.eventId;
     try {
-        const event = yield index_1.default.event.findUnique({
-            where: {
-                id: eventId,
-                isDeleted: false
-            },
-            select: {
-                id: true,
-                title: true,
-                type: true,
-                category: true,
-                description: true,
-                vip_ticket_price: true,
-                vip_tickets_count: true,
-                vip_tickets_sold: true,
-                general_ticket_price: true,
-                general_tickets_count: true,
-                general_tickets_sold: true,
-                date: true,
-                time_frame: true,
-                images: true,
-                location: {
-                    select: {
-                        venue: true,
-                        city: true,
-                        country: true,
+        let event;
+        let wishlist = [];
+        if (req.userId) {
+            event = yield index_1.default.event.findUnique({
+                where: { id: eventId, isDeleted: false },
+                select: {
+                    id: true,
+                    title: true,
+                    type: true,
+                    category: true,
+                    description: true,
+                    vip_ticket_price: true,
+                    vip_tickets_count: true,
+                    vip_tickets_sold: true,
+                    general_ticket_price: true,
+                    general_tickets_count: true,
+                    general_tickets_sold: true,
+                    date: true,
+                    time_frame: true,
+                    images: true,
+                    location: {
+                        select: { venue: true, city: true, country: true },
+                    },
+                    organizer_details: {
+                        select: {
+                            phone: true,
+                            user: { select: { id: true, email: true } },
+                        },
+                    },
+                    wishlist: {
+                        where: { userId: req.userId },
+                        select: { id: true, userId: true },
                     },
                 },
-                organizer_details: {
-                    select: {
-                        phone: true,
-                        user: {
-                            select: {
-                                id: true,
-                                email: true
-                            }
-                        }
-                    },
-                },
-                wishlist: {
-                    where: {
-                        userId: req.userId,
-                    },
-                    select: {
-                        id: true,
-                    },
-                },
-            },
-        });
-        let heart = false;
-        if (event && event.wishlist && event.wishlist.length > 0) {
-            heart = true;
+            });
+            wishlist = (_a = event === null || event === void 0 ? void 0 : event.wishlist) !== null && _a !== void 0 ? _a : [];
         }
-        console.log("heart", heart);
-        res.status(200).json({
-            event,
-            heart,
-        });
+        else {
+            event = yield index_1.default.event.findUnique({
+                where: { id: eventId, isDeleted: false },
+                select: {
+                    id: true,
+                    title: true,
+                    type: true,
+                    category: true,
+                    description: true,
+                    vip_ticket_price: true,
+                    vip_tickets_count: true,
+                    vip_tickets_sold: true,
+                    general_ticket_price: true,
+                    general_tickets_count: true,
+                    general_tickets_sold: true,
+                    date: true,
+                    time_frame: true,
+                    images: true,
+                    location: {
+                        select: { venue: true, city: true, country: true },
+                    },
+                    organizer_details: {
+                        select: {
+                            phone: true,
+                            user: { select: { id: true, email: true } },
+                        },
+                    },
+                },
+            });
+            wishlist = [];
+        }
+        const heart = wishlist.length > 0;
+        res.status(200).json({ event, heart });
     }
     catch (error) {
         console.log("error in get event", error);

@@ -291,7 +291,7 @@ router.post('/forgotpassword', async (req, res) => {
     }
 })
 
-router.post('/newsletter', restrictGuestActions, async (req, res) => {
+router.post('/newsletter', async (req, res) => {
 
     const {success,error} = newsletterScehma.safeParse(req.body)
     if(error){

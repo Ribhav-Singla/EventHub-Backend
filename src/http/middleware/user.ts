@@ -19,3 +19,18 @@ export const userMiddleware = (req: Request, res: Response, next: NextFunction) 
         return
     }
 }
+
+export const optionalUserMiddleware = (req: Request, res: Response, next: NextFunction) => {
+    const header = req.headers["authorization"];
+    const token = header?.split(" ")[1];
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, JWT_PASSWORD) as { userId: string }
+            req.userId = decoded.userId
+            console.log('Inside optionUserMiddleware, token verified');
+        } catch(e) {
+            console.log('optional user middleware error', e);
+        }
+    }
+    next()
+}

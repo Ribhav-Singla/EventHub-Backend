@@ -27,7 +27,6 @@ const googleapis_1 = require("googleapis");
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const node_cron_1 = __importDefault(require("node-cron"));
 const chat_1 = require("./chat");
-const guest_1 = require("../../middleware/guest");
 const types_1 = require("../../types");
 exports.router = express_1.default.Router();
 const transporter = nodemailer_1.default.createTransport({
@@ -275,7 +274,7 @@ exports.router.post('/forgotpassword', (req, res) => __awaiter(void 0, void 0, v
         res.status(500).json({ message: 'Internal Server Error' });
     }
 }));
-exports.router.post('/newsletter', guest_1.restrictGuestActions, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.router.post('/newsletter', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { success, error } = types_1.newsletterScehma.safeParse(req.body);
     if (error) {
         res.status(400).json({ message: "Invalid request" });

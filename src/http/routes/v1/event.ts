@@ -1,6 +1,7 @@
 import express from "express";
 import client from "../../../db/index";
 import moment from "moment-timezone";
+import { optionalUserMiddleware } from "../../middleware/user";
 
 export const eventRouter = express.Router();
 
@@ -13,7 +14,7 @@ eventRouter.get("/", async (req, res) => {
         const filters: any = {
             isDeleted: false,
             date: {
-                gte: new Date() 
+                gte: new Date()
             }
         };
 
@@ -169,7 +170,7 @@ eventRouter.get("/upcoming", async (req, res) => {
             skip: skip
         });
 
-        const events = fetched_events.map((event:any) => ({
+        const events = fetched_events.map((event: any) => ({
             ...event,
             images: event.images.slice(0, 1) || [],
         }));
@@ -180,72 +181,87 @@ eventRouter.get("/upcoming", async (req, res) => {
     }
 });
 
-eventRouter.get("/:eventId", async (req, res) => {
+eventRouter.get("/:eventId", optionalUserMiddleware, async (req, res) => {
     const eventId = req.params.eventId;
     try {
-        const event = await client.event.findUnique({
-            where: {
-                id: eventId,
-                isDeleted: false
-            },
-            select: {
-                id: true,
-                title: true,
-                type: true,
-                category: true,
-                description: true,
-                vip_ticket_price: true,
-                vip_tickets_count: true,
-                vip_tickets_sold: true,
-                general_ticket_price: true,
-                general_tickets_count: true,
-                general_tickets_sold: true,
-                date: true,
-                time_frame: true,
-                images: true,
-                location: {
-                    select: {
-                        venue: true,
-                        city: true,
-                        country: true,
-                    },
-                },
-                organizer_details: {
-                    select: {
-                        phone: true,
-                        user:{
-                            select:{
-                                id: true,
-                                email: true
-                            }
-                        }
-                    },
-                },
-                wishlist: {
-                    where: {
-                        userId: req.userId,
-                    },
-                    select: {
-                        id: true,
-                    },
-                },
-            },
-        });
+        let event;
+        let wishlist: { id: string; userId: string }[] = [];
 
-        let heart = false;
-        if (event && event.wishlist && event.wishlist.length > 0) {
-            heart = true;
+        if (req.userId) {
+            event = await client.event.findUnique({
+                where: { id: eventId, isDeleted: false },
+                select: {
+                    id: true,
+                    title: true,
+                    type: true,
+                    category: true,
+                    description: true,
+                    vip_ticket_price: true,
+                    vip_tickets_count: true,
+                    vip_tickets_sold: true,
+                    general_ticket_price: true,
+                    general_tickets_count: true,
+                    general_tickets_sold: true,
+                    date: true,
+                    time_frame: true,
+                    images: true,
+                    location: {
+                        select: { venue: true, city: true, country: true },
+                    },
+                    organizer_details: {
+                        select: {
+                            phone: true,
+                            user: { select: { id: true, email: true } },
+                        },
+                    },
+                    wishlist: {
+                        where: { userId: req.userId },
+                        select: { id: true, userId: true },
+                    },
+                },
+            });
+
+            wishlist = event?.wishlist ?? [];
+        } else {
+           
+            event = await client.event.findUnique({
+                where: { id: eventId, isDeleted: false },
+                select: {
+                    id: true,
+                    title: true,
+                    type: true,
+                    category: true,
+                    description: true,
+                    vip_ticket_price: true,
+                    vip_tickets_count: true,
+                    vip_tickets_sold: true,
+                    general_ticket_price: true,
+                    general_tickets_count: true,
+                    general_tickets_sold: true,
+                    date: true,
+                    time_frame: true,
+                    images: true,
+                    location: {
+                        select: { venue: true, city: true, country: true },
+                    },
+                    organizer_details: {
+                        select: {
+                            phone: true,
+                            user: { select: { id: true, email: true } },
+                        },
+                    },
+                },
+            });
+
+            wishlist = []; 
         }
+        const heart = wishlist.length > 0;
+        res.status(200).json({ event, heart });
 
-        console.log("heart", heart);
-        
-
-        res.status(200).json({
-            event,
-            heart,
-        });
     } catch (error) {
         console.log("error in get event", error);
         res.status(500).json({ message: "Internal Server Error" });
     }
 });
+
+

@@ -123,10 +123,11 @@ exports.userRouter.get("/wishlist", user_1.userMiddleware, (req, res) => __await
         res.status(500).json({ message: "Internal Server Error" });
     }
 }));
-exports.userRouter.post("/event/publish", guest_1.restrictGuestActions, user_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.userRouter.post("/event/publish", user_1.userMiddleware, guest_1.restrictGuestActions, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("inside publish event");
     const { success, error } = types_1.eventSchema.safeParse(req.body);
     if (error) {
+        console.log(error);
         res.status(400).json({ message: "Invalid request" });
         return;
     }
